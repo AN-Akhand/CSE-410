@@ -4,18 +4,36 @@
 #include <vector>
 #include <iostream>
 
-
+using namespace std;
 
 // Global variables
-GLfloat eyex = 2, eyey = 2, eyez = 2;
+GLfloat eyex = 3, eyey = 2, eyez = 3;
 GLfloat centerx = 0, centery = 0, centerz = 0;
 GLfloat upx = 0, upy = 1, upz = 0;
+
+GLfloat myx = 0, myy = 0, myz = 0;
+GLfloat xangle = 0, yangle = 0, zangle = 0;
 
 GLfloat scale = 1.0;
 GLfloat centroidx = 1.0/3.0, centroidy = 1.0/3.0, centroidz = 1.0/3.0;
 
 GLfloat cylinderParam1 = 2*scale/3.0 + 1.0/3;
 GLfloat cylinderParam2 = -scale/3.0 + 1.0/3;
+
+double xx;
+double xy;
+double xz;
+double xr;
+
+double yx;
+double yy;
+double yz;
+double yr;
+
+double zx;
+double zy;
+double zz;
+double zr; 
 
 
 
@@ -81,24 +99,20 @@ void drawSphereSegment(int subdivision, float radius)
 {
     glPushMatrix();
         glTranslatef(scale, 0, 0);
-        // Generate vertices for +X face using the buildUnitPositiveX function
         std::vector<float> vertices = buildUnitPositiveX(subdivision);
 
         // Compute the number of vertices per row and column
         int pointsPerRow = (int)pow(2, subdivision) + 1;
         int pointsPerColumn = pointsPerRow;
 
-        // Render the sphere segment as triangle strips row by row
         for (int i = 0; i < pointsPerColumn - 1; ++i)
         {
             glBegin(GL_TRIANGLE_STRIP);
             for (int j = 0; j < pointsPerRow; ++j)
             {
-                // Compute the indices of the current and next row
                 int currentIndex = i * pointsPerRow + j;
                 int nextRowIndex = (i + 1) * pointsPerRow + j;
 
-                // Draw the vertices of the current and next row as a triangle strip
                 glVertex3f(vertices[currentIndex * 3] * radius, vertices[currentIndex * 3 + 1] * radius, vertices[currentIndex * 3 + 2] * radius);
                 glVertex3f(vertices[nextRowIndex * 3] * radius, vertices[nextRowIndex * 3 + 1] * radius, vertices[nextRowIndex * 3 + 2] * radius);
             }
@@ -286,13 +300,27 @@ void display() {
               centerx,centery,centerz,
               upx,upy,upz);
 
-    //drawAxes();
-    
-    drawOctahedron();
-    
-    drawCylinders();
+    glPushMatrix();
 
-    drawSphereSegments();
+        drawAxes();
+    
+    glPopMatrix();
+
+    glPushMatrix();
+
+        glTranslatef(myx,myy,myz);
+
+        //glScalef(0.5,0.5,0.5);
+
+        drawAxes();
+
+        drawOctahedron();
+
+        drawCylinders();
+
+        drawSphereSegments();
+    
+    glPopMatrix();
 
     glutSwapBuffers();  // Render now
 }
@@ -324,60 +352,104 @@ void reshapeListener(GLsizei width, GLsizei height) {  // GLsizei for non-negati
 
 /* Callback handler for normal-key event */
 void keyboardListener(unsigned char key, int x, int y) {
-    float v = 0.1;
-    float dv = 0.1;
+    float v = 0.05;
+    GLfloat vangle = 10.0 * M_PI / 180.0;
+
+    zx = centerx - eyex;
+    zy = centery - eyey;
+    zz = centerz - eyez;
+    zr = sqrt(zx*zx + zz*zz + zy*zy);
+    zx /= zr;
+    zy /= zr;
+    zz /= zr;
+
+    xx = upy * zz - upz * zy;
+    xy = -(upx * zz - upz * zx);
+    xz = upx * zy - upy * zx;
+    xr = sqrt(xx*xx + xy*xy + xz*xz);
+    xx /= xr;
+    xy /= xr;
+    xz /= xr;
+
+    yx = xy * zz - xz * zy;
+    yy = -(xx * zz - xz * zx);
+    yz = xx * zy - xy * zx;
+    yr = sqrt(yx*yx + yy*yy + yz*yz);
+    yx /= yr;
+    yy /= yr;
+    yz /= yr;
+
+
+    //double circle_curr_vect_x = myx - eyex;
+    //double circle_curr_vect_y = myy - eyey;
+    //double circle_curr_vect_z = myz - eyez;
+    //double circle_curr_vect_r = sqrt(circle_curr_vect_x * circle_curr_vect_x + circle_curr_vect_y * circle_curr_vect_y + circle_curr_vect_z * circle_curr_vect_z);
+
+    double circle_init_x = -eyex + zr * xx;
+    double circle_init_y = -eyey + zr * xy;
+    double circle_init_z = -eyez + zr * xz; 
+
+    double circle_init_vect_x = circle_init_x - eyex;
+    double circle_init_vect_y = circle_init_y - eyey;
+    double circle_init_vect_z = circle_init_z - eyez;
+    double circle_init_vect_r = sqrt(circle_init_vect_x * circle_init_vect_x + circle_init_vect_y * circle_init_vect_y + circle_init_vect_z * circle_init_vect_z);
+    
+    double dot;
+    double det;
     switch (key) {
-    // Control eye (location of the eye)
-    // control eyex
     case '1':
-        eyex += v;
+        //calculate the angle between the initial vector and the current vector
+        dot = circle_init_vect_x * zx + circle_init_vect_y * zy + circle_init_vect_z * zz;
+        det = circle_init_vect_r;
+        yangle = acos(dot/det);
+        yangle += vangle;
+        centerx = -eyex + zr * cos(yangle) * xx + zr * sin(yangle) * zx;
+        centery = -eyey + zr * cos(yangle) * xy + zr * sin(yangle) * zy;
+        centerz = -eyez + zr * cos(yangle) * xz + zr * sin(yangle) * zz;
         break;
     case '2':
-        eyex -= v;
+        dot = circle_init_vect_x * zx + circle_init_vect_y * zy + circle_init_vect_z * zz;
+        det = circle_init_vect_r;
+        yangle = acos(dot/det);
+        yangle -= vangle;
+        centerx = -eyex + zr * cos(yangle) * xx + zr * sin(yangle) * zx;
+        centery = -eyey + zr * cos(yangle) * xy + zr * sin(yangle) * zy;
+        centerz = -eyez + zr * cos(yangle) * xz + zr * sin(yangle) * zz;
         break;
     // control eyey
     case '3':
-        eyey += v;
         break;
     case '4':
-        eyey -= v;
         break;
     // control eyez
     case '5':
-        eyez += v;
+        zangle += vangle;
+        upx = -sin(zangle);
+        upy = cos(zangle);
+        upz = 0;
         break;
     case '6':
-        eyez -= v;
-        break;
-
-    // Control center (location where the eye is looking at)
-    // control centerx
-    case 'q':
-        centerx += v;
+        zangle -= vangle;
+        upx = -sin(zangle);
+        upy = cos(zangle);
+        upz = 0;
         break;
     case 'w':
-        centerx -= v;
+        eyex += v*upx;
+        eyey += v*upy;
+        eyez += v*upz;
         break;
-    // control centery
-    case 'e':
-        centery += v;
-        break;
-    case 'r':
-        centery -= v;
-        break;
-    // control centerz
-    case 't':
-        centerz += v;
-        break;
-    case 'y':
-        centerz -= v;
+    case 's':
+        eyex -= v*upx;
+        eyey -= v*upy;
+        eyez -= v*upz;
         break;
     //control scale
-    case ',':
+    case '.':
         if(scale < 1)
             scale += v;
         break;
-    case '.':
+    case ',':
         if(scale > 0)
             scale -= v;
         break;
@@ -392,31 +464,61 @@ void keyboardListener(unsigned char key, int x, int y) {
 /* Callback handler for special-key event */
 void specialKeyListener(int key, int x,int y) {
     double v = 0.25;
-    double lx = centerx - eyex;
-    double lz = centerz - eyez;
-    double s;
+    zx = centerx - eyex;
+    zy = centery - eyey;
+    zz = centerz - eyez;
+    zr = sqrt(zx*zx + zz*zz + zy*zy);
+    zx /= zr;
+    zy /= zr;
+    zz /= zr;
+
+    xx = upy * zz - upz * zy;
+    xy = -(upx * zz - upz * zx);
+    xz = upx * zy - upy * zx;
+    xr = sqrt(xx*xx + xy*xy + xz*xz);
+    xx /= xr;
+    xy /= xr;
+    xz /= xr;
+
+    yx = xy * zz - xz * zy;
+    yy = -(xx * zz - xz * zx);
+    yz = xx * zy - xy * zx;
+    yr = sqrt(yx*yx + yy*yy + yz*yz);
+    yx /= yr;
+    yy /= yr;
+    yz /= yr;
+
     switch (key) {
     case GLUT_KEY_LEFT:
-        eyex += v * (upy*lz);
-        eyez += v * (-lx*upy);
-        s = sqrt(eyex*eyex + eyez*eyez) / (2 * sqrt(2));
-        eyex /= s;
-        eyez /= s;
+        myx += xx * v;
+        myy += xy * v;
+        myz += xz * v;
         break;
     case GLUT_KEY_RIGHT:
-        eyex += v * (-upy*lz);
-        eyez += v * (lx*upy);
-        s = sqrt(eyex*eyex + eyez*eyez) / (2 * sqrt(2));
-        eyex /= s;
-        eyez /= s;
-        break;
-    case GLUT_KEY_UP:
-        eyey += v;
+        myx -= xx * v;
+        myy -= xy * v;
+        myz -= xz * v;
         break;
     case GLUT_KEY_DOWN:
-        eyey -= v;
+        myx += v * zx;
+        myy += v * zy;
+        myz += v * zz;
         break;
-    
+    case GLUT_KEY_UP:
+        myx -= v * zx;
+        myy -= v * zy;
+        myz -= v * zz;
+        break;
+    case GLUT_KEY_PAGE_UP:
+        myx += yx * v;
+        myy += yy * v;
+        myz += yz * v;
+        break;
+    case GLUT_KEY_PAGE_DOWN:
+        myx -= yx * v;
+        myy -= yy * v;
+        myz -= yz * v;
+        break;
     default:
         return;
     }
