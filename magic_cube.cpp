@@ -30,6 +30,15 @@ struct point u;         // up direction
 
 void calc_vects(){
 
+    // Calculate the look vector
+    l.x = center.x - pos.x;
+    l.y = center.y - pos.y;
+    l.z = center.z - pos.z;
+    d = sqrt(l.x*l.x + l.y*l.y + l.z*l.z);
+    l.x /= d;
+    l.y /= d;
+    l.z /= d;
+
     // Calculate the right vector
     r.x = l.y * u.z - l.z * u.y;
     r.y = l.z * u.x - l.x * u.z;
@@ -416,25 +425,11 @@ void keyboardListener(unsigned char key, int xx,int yy){
 
         case 'w':
             pos.y += 1*v;
-            l.x = center.x - pos.x;
-            l.y = center.y - pos.y;
-            l.z = center.z - pos.z;
-            d = sqrt(l.x*l.x + l.y*l.y + l.z*l.z);
-            l.x /= d;
-            l.y /= d;
-            l.z /= d;
             calc_vects();
             break;
         
         case 's':
             pos.y -= 1*v;
-            l.x = center.x - pos.x;
-            l.y = center.y - pos.y;
-            l.z = center.z - pos.z;
-            d = sqrt(l.x*l.x + l.y*l.y + l.z*l.z);
-            l.x /= d;
-            l.y /= d;
-            l.z /= d;
             calc_vects();
             break;
 
@@ -466,17 +461,16 @@ void keyboardListener(unsigned char key, int xx,int yy){
 void specialKeyListener(int key, int x,int y)
 {
     double rate = 0.1;
-    double lr = sqrt(l.x*l.x + l.y*l.y + l.z*l.z);
 	switch(key){
 		case GLUT_KEY_UP:		//down arrow key
-			pos.x+=l.x * rate / lr;
-			pos.y+=l.y * rate / lr;
-			pos.z+=l.z * rate / lr;
+			pos.x+=l.x * rate;
+			pos.y+=l.y * rate;
+			pos.z+=l.z * rate;
 			break;
 		case GLUT_KEY_DOWN:		// up arrow key
-			pos.x-=l.x * rate / lr;
-			pos.y-=l.y * rate / lr;
-			pos.z-=l.z * rate / lr;
+			pos.x-=l.x * rate;
+			pos.y-=l.y * rate;
+			pos.z-=l.z * rate;
 			break;
 
 		case GLUT_KEY_RIGHT:
@@ -518,10 +512,7 @@ void specialKeyListener(int key, int x,int y)
 /* Main function: GLUT runs as a console application starting at main()  */
 int main(int argc, char** argv) {
     pos.x=2;pos.y=1;pos.z=2;
-
-    l.x=-pos.x;l.y=-pos.y;l.z=-pos.z;
-    d = sqrt(l.x*l.x + l.y*l.y + l.z*l.z);
-    l.x/=d;l.y/=d;l.z/=d;
+    center.x=0;center.y=0;center.z=0;
     u.x=0;u.y=1;u.z=0;
     calc_vects();
 
