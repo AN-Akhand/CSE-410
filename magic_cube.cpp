@@ -1,41 +1,53 @@
+#define _USE_MATH_DEFINES
+
 #include <windows.h>  // for MS Windows
 #include <GL/glut.h>  // GLUT, include glu.h and gl.h
 #include <cmath>
 #include <vector>
-#include <iostream>
-
-using namespace std;
-
-// Global variables
-GLfloat eyex = 3, eyey = 2, eyez = 3;
-GLfloat centerx = 0, centery = 0, centerz = 0;
-GLfloat upx = 0, upy = 1, upz = 0;
-
-GLfloat myx = 0, myy = 0, myz = 0;
-GLfloat xangle = 0, yangle = 0, zangle = 0;
 
 GLfloat scale = 1.0;
 GLfloat centroidx = 1.0/3.0, centroidy = 1.0/3.0, centroidz = 1.0/3.0;
+GLfloat angle = 0;
 
-GLfloat cylinderParam1 = 2*scale/3.0 + 1.0/3;
-GLfloat cylinderParam2 = -scale/3.0 + 1.0/3;
+struct point {
+    GLfloat x, y, z;
+};
 
-double xx;
-double xy;
-double xz;
-double xr;
+/* Initialize OpenGL Graphics */
+void initGL() {
+    // Set "clearing" or background color
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);   // Black and opaque
+    glEnable(GL_DEPTH_TEST);   // Enable depth testing for z-culling
+}
 
-double yx;
-double yy;
-double yz;
-double yr;
+// Global variables
+struct point pos;       // position of the eye
+struct point center;    // position of center
+double d;               // distance of eye from center
+struct point l;         // look/forward direction
+struct point r;         // right direction
+struct point u;         // up direction
 
-double zx;
-double zy;
-double zz;
-double zr; 
+void calc_vects(){
 
+    // Calculate the right vector
+    r.x = l.y * u.z - l.z * u.y;
+    r.y = l.z * u.x - l.x * u.z;
+    r.z = l.x * u.y - l.y * u.x;
+    double length = sqrt(r.x*r.x + r.y*r.y + r.z*r.z);
+    r.x /= length;
+    r.y /= length;
+    r.z /= length;
 
+    // Calculate the up vector
+    u.x = r.y * l.z - r.z * l.y;
+    u.y = r.z * l.x - r.x * l.z;
+    u.z = r.x * l.y - r.y * l.x;
+    length = sqrt(u.x*u.x + u.y*u.y + u.z*u.z);
+    u.x /= length;
+    u.y /= length;
+    u.z /= length;
+}
 
 std::vector<float> buildUnitPositiveX(int subdivision)
 {
@@ -277,13 +289,6 @@ void drawSphereSegments(){
     glPopMatrix();
 }
 
-/* Initialize OpenGL Graphics */
-void initGL() {
-    // Set "clearing" or background color
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);   // Black and opaque
-    glEnable(GL_DEPTH_TEST);   // Enable depth testing for z-culling
-}
-
 /*  Handler for window-repaint event. Call back when the window first appears and
     whenever the window needs to be re-painted. */
 void display() {
@@ -296,23 +301,16 @@ void display() {
     // gluLookAt(0,0,0, 0,0,-100, 0,1,0);
 
     // control viewing (or camera)
-    gluLookAt(eyex,eyey,eyez,
-              centerx,centery,centerz,
-              upx,upy,upz);
+    center.x = pos.x + l.x * d;
+    center.y = pos.y + l.y * d;
+    center.z = pos.z + l.z * d;
+    gluLookAt(pos.x,pos.y,pos.z,
+              center.x,center.y,center.z, 
+              u.x,u.y,u.z);
 
     glPushMatrix();
 
-        drawAxes();
-    
-    glPopMatrix();
-
-    glPushMatrix();
-
-        glTranslatef(myx,myy,myz);
-
-        //glScalef(0.5,0.5,0.5);
-
-        drawAxes();
+        glRotatef(angle, 0, 1, 0);
 
         drawOctahedron();
 
@@ -325,9 +323,10 @@ void display() {
     glutSwapBuffers();  // Render now
 }
 
+
 /* Handler for window re-size event. Called back when the window first appears and
    whenever the window is re-sized with its new width and height */
-void reshapeListener(GLsizei width, GLsizei height) {  // GLsizei for non-negative integer
+void reshape(GLsizei width, GLsizei height) {  // GLsizei for non-negative integer
     // Compute aspect ratio of the new window
     if (height == 0) height = 1;                // To prevent divide by 0
     GLfloat aspect = (GLfloat)width / (GLfloat)height;
@@ -347,196 +346,197 @@ void reshapeListener(GLsizei width, GLsizei height) {  // GLsizei for non-negati
     }*/
     // Enable perspective projection with fovy, aspect, zNear and zFar
     gluPerspective(45.0f, aspect, 0.1f, 100.0f);
-
 }
 
-/* Callback handler for normal-key event */
-void keyboardListener(unsigned char key, int x, int y) {
+void keyboardListener(unsigned char key, int xx,int yy){
+    double rate = 0.01;
     float v = 0.05;
-    GLfloat vangle = 10.0 * M_PI / 180.0;
+    double len;
+	switch(key){
 
-    zx = centerx - eyex;
-    zy = centery - eyey;
-    zz = centerz - eyez;
-    zr = sqrt(zx*zx + zz*zz + zy*zy);
-    zx /= zr;
-    zy /= zr;
-    zz /= zr;
+		case '1':
+			r.x = r.x*cos(rate)+l.x*sin(rate);
+			r.y = r.y*cos(rate)+l.y*sin(rate);
+			r.z = r.z*cos(rate)+l.z*sin(rate);
 
-    xx = upy * zz - upz * zy;
-    xy = -(upx * zz - upz * zx);
-    xz = upx * zy - upy * zx;
-    xr = sqrt(xx*xx + xy*xy + xz*xz);
-    xx /= xr;
-    xy /= xr;
-    xz /= xr;
+			l.x = l.x*cos(rate)-r.x*sin(rate);
+			l.y = l.y*cos(rate)-r.y*sin(rate);
+			l.z = l.z*cos(rate)-r.z*sin(rate);
+			break;
 
-    yx = xy * zz - xz * zy;
-    yy = -(xx * zz - xz * zx);
-    yz = xx * zy - xy * zx;
-    yr = sqrt(yx*yx + yy*yy + yz*yz);
-    yx /= yr;
-    yy /= yr;
-    yz /= yr;
+        case '2':
+			r.x = r.x*cos(-rate)+l.x*sin(-rate);
+			r.y = r.y*cos(-rate)+l.y*sin(-rate);
+			r.z = r.z*cos(-rate)+l.z*sin(-rate);
 
+			l.x = l.x*cos(-rate)-r.x*sin(-rate);
+			l.y = l.y*cos(-rate)-r.y*sin(-rate);
+			l.z = l.z*cos(-rate)-r.z*sin(-rate);
+			break;
 
-    //double circle_curr_vect_x = myx - eyex;
-    //double circle_curr_vect_y = myy - eyey;
-    //double circle_curr_vect_z = myz - eyez;
-    //double circle_curr_vect_r = sqrt(circle_curr_vect_x * circle_curr_vect_x + circle_curr_vect_y * circle_curr_vect_y + circle_curr_vect_z * circle_curr_vect_z);
+        case '3':
+			l.x = l.x*cos(rate)+u.x*sin(rate);
+			l.y = l.y*cos(rate)+u.y*sin(rate);
+			l.z = l.z*cos(rate)+u.z*sin(rate);
 
-    double circle_init_x = -eyex + zr * xx;
-    double circle_init_y = -eyey + zr * xy;
-    double circle_init_z = -eyez + zr * xz; 
+			u.x = u.x*cos(rate)-l.x*sin(rate);
+			u.y = u.y*cos(rate)-l.y*sin(rate);
+			u.z = u.z*cos(rate)-l.z*sin(rate);
+			break;
 
-    double circle_init_vect_x = circle_init_x - eyex;
-    double circle_init_vect_y = circle_init_y - eyey;
-    double circle_init_vect_z = circle_init_z - eyez;
-    double circle_init_vect_r = sqrt(circle_init_vect_x * circle_init_vect_x + circle_init_vect_y * circle_init_vect_y + circle_init_vect_z * circle_init_vect_z);
-    
-    double dot;
-    double det;
-    switch (key) {
-    case '1':
-        //calculate the angle between the initial vector and the current vector
-        dot = circle_init_vect_x * zx + circle_init_vect_y * zy + circle_init_vect_z * zz;
-        det = circle_init_vect_r;
-        yangle = acos(dot/det);
-        yangle += vangle;
-        centerx = -eyex + zr * cos(yangle) * xx + zr * sin(yangle) * zx;
-        centery = -eyey + zr * cos(yangle) * xy + zr * sin(yangle) * zy;
-        centerz = -eyez + zr * cos(yangle) * xz + zr * sin(yangle) * zz;
-        break;
-    case '2':
-        dot = circle_init_vect_x * zx + circle_init_vect_y * zy + circle_init_vect_z * zz;
-        det = circle_init_vect_r;
-        yangle = acos(dot/det);
-        yangle -= vangle;
-        centerx = -eyex + zr * cos(yangle) * xx + zr * sin(yangle) * zx;
-        centery = -eyey + zr * cos(yangle) * xy + zr * sin(yangle) * zy;
-        centerz = -eyez + zr * cos(yangle) * xz + zr * sin(yangle) * zz;
-        break;
-    // control eyey
-    case '3':
-        break;
-    case '4':
-        break;
-    // control eyez
-    case '5':
-        zangle += vangle;
-        upx = -sin(zangle);
-        upy = cos(zangle);
-        upz = 0;
-        break;
-    case '6':
-        zangle -= vangle;
-        upx = -sin(zangle);
-        upy = cos(zangle);
-        upz = 0;
-        break;
-    case 'w':
-        eyex += v*upx;
-        eyey += v*upy;
-        eyez += v*upz;
-        break;
-    case 's':
-        eyex -= v*upx;
-        eyey -= v*upy;
-        eyez -= v*upz;
-        break;
-    //control scale
-    case '.':
-        if(scale < 1)
-            scale += v;
-        break;
-    case ',':
-        if(scale > 0)
-            scale -= v;
-        break;
-    // Control exit
-    case 27:    // ESC key
-        exit(0);    // Exit window
-        break;
-    }
-    glutPostRedisplay();    // Post a paint request to activate display()
+        case '4':
+			l.x = l.x*cos(-rate)+u.x*sin(-rate);
+			l.y = l.y*cos(-rate)+u.y*sin(-rate);
+			l.z = l.z*cos(-rate)+u.z*sin(-rate);
+
+			u.x = u.x*cos(-rate)-l.x*sin(-rate);
+			u.y = u.y*cos(-rate)-l.y*sin(-rate);
+			u.z = u.z*cos(-rate)-l.z*sin(-rate);
+			break;
+
+        case '5':
+			u.x = u.x*cos(rate)+r.x*sin(rate);
+			u.y = u.y*cos(rate)+r.y*sin(rate);
+			u.z = u.z*cos(rate)+r.z*sin(rate);
+
+			r.x = r.x*cos(rate)-u.x*sin(rate);
+			r.y = r.y*cos(rate)-u.y*sin(rate);
+			r.z = r.z*cos(rate)-u.z*sin(rate);
+			break;
+
+        case '6':
+			u.x = u.x*cos(-rate)+r.x*sin(-rate);
+			u.y = u.y*cos(-rate)+r.y*sin(-rate);
+			u.z = u.z*cos(-rate)+r.z*sin(-rate);
+
+			r.x = r.x*cos(-rate)-u.x*sin(-rate);
+			r.y = r.y*cos(-rate)-u.y*sin(-rate);
+			r.z = r.z*cos(-rate)-u.z*sin(-rate);
+			break;
+
+        case 'w':
+            pos.y += 1*v;
+            l.x = center.x - pos.x;
+            l.y = center.y - pos.y;
+            l.z = center.z - pos.z;
+            d = sqrt(l.x*l.x + l.y*l.y + l.z*l.z);
+            l.x /= d;
+            l.y /= d;
+            l.z /= d;
+            calc_vects();
+            break;
+        
+        case 's':
+            pos.y -= 1*v;
+            l.x = center.x - pos.x;
+            l.y = center.y - pos.y;
+            l.z = center.z - pos.z;
+            d = sqrt(l.x*l.x + l.y*l.y + l.z*l.z);
+            l.x /= d;
+            l.y /= d;
+            l.z /= d;
+            calc_vects();
+            break;
+
+        case 'a':
+            angle += rate*360;
+            break;
+        
+        case 'd':
+            angle -= rate*360;
+            break;
+        
+        case '.':
+            if(scale < 1)
+                scale += v;
+            break;
+
+        case ',':
+            if(scale > 0)
+                scale -= v;
+            break;
+
+		default:
+			break;
+	}
+	glutPostRedisplay();
 }
 
-/* Callback handler for special-key event */
-void specialKeyListener(int key, int x,int y) {
-    double v = 0.25;
-    zx = centerx - eyex;
-    zy = centery - eyey;
-    zz = centerz - eyez;
-    zr = sqrt(zx*zx + zz*zz + zy*zy);
-    zx /= zr;
-    zy /= zr;
-    zz /= zr;
 
-    xx = upy * zz - upz * zy;
-    xy = -(upx * zz - upz * zx);
-    xz = upx * zy - upy * zx;
-    xr = sqrt(xx*xx + xy*xy + xz*xz);
-    xx /= xr;
-    xy /= xr;
-    xz /= xr;
+void specialKeyListener(int key, int x,int y)
+{
+    double rate = 0.1;
+    double lr = sqrt(l.x*l.x + l.y*l.y + l.z*l.z);
+	switch(key){
+		case GLUT_KEY_UP:		//down arrow key
+			pos.x+=l.x * rate / lr;
+			pos.y+=l.y * rate / lr;
+			pos.z+=l.z * rate / lr;
+			break;
+		case GLUT_KEY_DOWN:		// up arrow key
+			pos.x-=l.x * rate / lr;
+			pos.y-=l.y * rate / lr;
+			pos.z-=l.z * rate / lr;
+			break;
 
-    yx = xy * zz - xz * zy;
-    yy = -(xx * zz - xz * zx);
-    yz = xx * zy - xy * zx;
-    yr = sqrt(yx*yx + yy*yy + yz*yz);
-    yx /= yr;
-    yy /= yr;
-    yz /= yr;
+		case GLUT_KEY_RIGHT:
+			pos.x+=r.x * rate;
+			pos.y+=r.y * rate;
+			pos.z+=r.z * rate;
+			break;
+		case GLUT_KEY_LEFT :
+			pos.x-=r.x * rate;
+			pos.y-=r.y * rate;
+			pos.z-=r.z * rate;
+			break;
 
-    switch (key) {
-    case GLUT_KEY_LEFT:
-        myx += xx * v;
-        myy += xy * v;
-        myz += xz * v;
-        break;
-    case GLUT_KEY_RIGHT:
-        myx -= xx * v;
-        myy -= xy * v;
-        myz -= xz * v;
-        break;
-    case GLUT_KEY_DOWN:
-        myx += v * zx;
-        myy += v * zy;
-        myz += v * zz;
-        break;
-    case GLUT_KEY_UP:
-        myx -= v * zx;
-        myy -= v * zy;
-        myz -= v * zz;
-        break;
-    case GLUT_KEY_PAGE_UP:
-        myx += yx * v;
-        myy += yy * v;
-        myz += yz * v;
-        break;
-    case GLUT_KEY_PAGE_DOWN:
-        myx -= yx * v;
-        myy -= yy * v;
-        myz -= yz * v;
-        break;
-    default:
-        return;
-    }
-    glutPostRedisplay();    // Post a paint request to activate display()
+		case GLUT_KEY_PAGE_UP:
+		    pos.x+=u.x * rate;
+			pos.y+=u.y * rate;
+			pos.z+=u.z * rate;
+			break;
+		case GLUT_KEY_PAGE_DOWN:
+            pos.x-=u.x * rate;
+			pos.y-=u.y * rate;
+			pos.z-=u.z * rate;
+			break;
+
+		case GLUT_KEY_INSERT:
+			break;
+
+		case GLUT_KEY_HOME:
+			break;
+		case GLUT_KEY_END:
+			break;
+
+		default:
+			break;
+	}
+	glutPostRedisplay();
 }
 
 /* Main function: GLUT runs as a console application starting at main()  */
 int main(int argc, char** argv) {
-    glutInit(&argc, argv);                      // Initialize GLUT
-    glutInitWindowSize(640, 640);               // Set the window's initial width & height
-    glutInitWindowPosition(50, 50);             // Position the window's initial top-left corner
+    pos.x=2;pos.y=1;pos.z=2;
+
+    l.x=-pos.x;l.y=-pos.y;l.z=-pos.z;
+    d = sqrt(l.x*l.x + l.y*l.y + l.z*l.z);
+    l.x/=d;l.y/=d;l.z/=d;
+    u.x=0;u.y=1;u.z=0;
+    calc_vects();
+
+    glutInit(&argc, argv);                  // Initialize GLUT
+    glutInitWindowSize(640, 640);           // Set the window's initial width & height
+    glutInitWindowPosition(50, 50);         // Position the window's initial top-left corner
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGB);	//Depth, Double buffer, RGB color
-    glutCreateWindow("OpenGL 3D Drawing");      // Create a window with the given title
-    glutDisplayFunc(display);                   // Register display callback handler for window re-paint
-    glutReshapeFunc(reshapeListener);           // Register callback handler for window re-shape
-    glutKeyboardFunc(keyboardListener);         // Register callback handler for normal-key event
-    glutSpecialFunc(specialKeyListener);        // Register callback handler for special-key event
-    initGL();                                   // Our own OpenGL initialization
-    glutMainLoop();                             // Enter the event-processing loop
+    glutCreateWindow("OpenGL 3D Drawing 2");          // Create a window with the given title
+    glutDisplayFunc(display);               // Register display callback handler for window re-paint
+    glutReshapeFunc(reshape);               // Register callback handler for window re-shape
+
+	glutKeyboardFunc(keyboardListener);
+	glutSpecialFunc(specialKeyListener);
+
+    initGL();                               // Our own OpenGL initialization
+    glutMainLoop();                         // Enter the event-processing loop
     return 0;
 }

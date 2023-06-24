@@ -67,6 +67,7 @@ void drawFilledCircle(GLfloat x, GLfloat y, GLfloat radius, int lineAmount){
 }
 
 void drawClockMarkings(){
+	glColor3f(1.0f,1.0f,1.0f);  // White
 	glTranslatef(0, 0, 0);
 	for(int i = 0; i < 12; i++){
 		if(i % 3 == 0){
@@ -89,9 +90,17 @@ void drawClockMarkings(){
 }
 
 void drawClockFrame(){
-	glColor3f(1.0f,1.0f,1.0f);  // White
 	glTranslatef(0, 0, 0);
-	glBegin(GL_LINE_LOOP);
+	glColor3f(0.0, abs(sin(w/2 * t/100)), abs(cos(w/2 * t/100)));
+	glBegin(GL_POLYGON);
+		glVertex2f( -0.75f, 0.63f);
+		glVertex2f( -0.75f, -0.58f);
+		glVertex2f( 0.0f, -1.45f);
+		glVertex2f( 0.75f, -0.58f);
+		glVertex2f( 0.75f, 0.63f);
+	glEnd();
+	glColor3f(0.0, 0.0, 0.0);
+	glBegin(GL_POLYGON);
 		glVertex2f( -0.65f, 0.58f);
 		glVertex2f( -0.65f, -0.58f);
 		glVertex2f( 0.0f, -1.4f);
@@ -103,33 +112,39 @@ void drawClockFrame(){
 
 void drawClockBody(){
 	glPushMatrix();
-		glColor3f(1.0f,1.0f,1.0f);  // White
-		glTranslatef(0, 0, 0);
-		drawHollowCircle(0,0,0.5,100);
-		drawHollowCircle(0,0,0.55,100);
 		drawClockFrame();
+		glColor3f(abs(cos(w/2 * t/100)), 0.0, abs(sin(w/2 * t/100)));
+		glTranslatef(0, 0, 0);
+		drawFilledCircle(0,0,0.55,100);
+		glColor3f(0.0f,0.0f,0.0f);
+		drawFilledCircle(0,0,0.5,100);
 		drawClockMarkings();
 	glPopMatrix();
 }
 
 void drawPendulumPivot(){
-	glColor3f(1.0f,1.0f,1.0f);  // White
+	glColor3f(abs(cos(w/2 * t/100)), 0.0, abs(sin(w/2 * t/100)));
 	glTranslatef(0, 0, 0);
 	drawFilledCircle(0,0,0.03,100);
 }
 
 void drawPendulumRod(){
 	glLineWidth(6);
-	glColor3f(1.0f,1.0f,1.0f);  // White
 	glTranslatef(0, 0, 0);
 	glBegin(GL_LINES);  // Each set of 2 vertices form a line of single pixel width
-	    glVertex2f( 0.0f, 0.0f);
+		glColor3f(abs(cos(w/2 * t/100)), 0.0, abs(sin(w/2 * t/100)));
+	    glVertex2f( 0.0f, -0.01f);
+		glColor3f(0.5f,0.5f,0.5f);
+	    glVertex2f( 0.0f, -0.25f);
+		glColor3f(0.5f,0.5f,0.5f);
+	    glVertex2f( 0.0f, -0.25f);
+		glColor3f(abs(sin(w * t/100)), abs(cos(w * t/100)), 0.0);
 	    glVertex2f( 0.0f, -0.5f);
 	glEnd();
 }
 
 void drawPendulumBob(){
-	glColor3f(1.0f,1.0f,1.0f);  // White
+	glColor3f(abs(sin(w * t/100)), abs(cos(w * t/100)), 0.0);
 	glTranslatef(0, 0, 0);
 	drawFilledCircle(0,-0.48,0.05,100);
 }
@@ -145,40 +160,52 @@ void drawPendulum(){
 }
 
 void drawSecondHand(){
-	glLineWidth(2);
 	glPushMatrix();
-		glColor3f(1.0f,1.0f,1.0f);  // White
+		glColor3f(1.0f,0.0f,0.0f);
 		glTranslatef(0, 0, 0);
 		glRotatef(secondAngle, 0, 0, 1);
-    	glBegin(GL_LINES);  // Each set of 2 vertices form a line of single pixel width
-    	    glVertex2f( 0.0f, -0.1f);
-    	    glVertex2f( 0.0f, 0.4f);
+    	glBegin(GL_POLYGON);
+    	    glVertex2f( 0.008f, -0.1f);
+    	    glVertex2f( -0.008f, -0.1f);
+			glVertex2f( 0.00f, 0.4f);
     	glEnd();
 	glPopMatrix();
 }
 
 void drawMinuteHand(){
-	glLineWidth(3);
+	glLineWidth(2);
 	glPushMatrix();
-		glColor3f(1.0f,1.0f,1.0f);  // White
+		glColor3f(0.0f,1.0f,0.0f);  // White
 		glTranslatef(0, 0, 0);
 		glRotatef(minuteAngle, 0, 0, 1);
-    	glBegin(GL_LINES);  // Each set of 2 vertices form a line of single pixel width
-    	    glVertex2f( 0.0f, -0.05f);
-    	    glVertex2f( 0.0f, 0.35f);
-    	glEnd();
+    	//draw vertical sine wave from 0 to 6*pi
+		glBegin(GL_LINE_STRIP);
+		    for(float i = 0; i <= 12 * M_PI; i += 0.01){
+		    	glVertex2f( 0.01f * sin(i), 0.0185f/2 * i);
+		    }
+		glEnd();
 	glPopMatrix();
 }
 
 void drawHourHand(){
-	glLineWidth(4);
 	glPushMatrix();
-		glColor3f(1.0f,1.0f,1.0f);  // White
+		glColor3f(0.0f,0.0f,1.0f);
 		glTranslatef(0, 0, 0);
 		glRotatef(hourAngle, 0, 0, 1);
-    	glBegin(GL_LINES);  // Each set of 2 vertices form a line of single pixel width
-    	    glVertex2f( 0.0f, -0.05f);
-    	    glVertex2f( 0.0f, 0.3f);
+    	glBegin(GL_POLYGON);  // Each set of 2 vertices form a line of single pixel width
+    	    glVertex2f( 0.012f, -0.05f);
+    	    glVertex2f( -0.012f, -0.05f);
+			glVertex2f( -0.02f, 0.25f);
+			glVertex2f( 0.0f, 0.3f);
+			glVertex2f( 0.02f, 0.25f);
+    	glEnd();
+		glColor3f(0.0f,0.0f,0.0f);
+		glBegin(GL_POLYGON);  // Each set of 2 vertices form a line of single pixel width
+    	    glVertex2f( 0.005f, -0.04f);
+    	    glVertex2f( -0.005f, -0.04f);
+			glVertex2f( -0.015f, 0.25f);
+			glVertex2f( 0.0f, 0.28f);
+			glVertex2f( 0.015f, 0.25f);
     	glEnd();
 	glPopMatrix();
 }
@@ -192,15 +219,17 @@ void display() {
 	glMatrixMode(GL_MODELVIEW);             // To operate on Model-View matrix
     glLoadIdentity();                       // Reset the model-view matrix
 
-	glTranslatef(0.0f, 0.4f, 0.0f);
+	glScalef(0.8, 0.8, 0.8);
+
+	glTranslatef(0, 0.4, 0);
 
 	drawClockBody();
 
-	drawSecondHand();
+	drawHourHand();
 
 	drawMinuteHand();
 
-	drawHourHand();
+	drawSecondHand();
 
 	drawPendulum();
 
@@ -231,6 +260,8 @@ void timer(int value){
 	}
 
 	pendulumAngle = 45.0f * cos(w * t/100);
+
+	if(t == 1000) t = 0;
 
 	glutPostRedisplay();    // Post re-paint request to activate display()
 	glutTimerFunc(refreshMillis, timer, 0);             // First timer call immediately
