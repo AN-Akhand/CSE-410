@@ -63,8 +63,6 @@ void initClockAngles(){
 		moonAngle = moonAngle / 12.0f;
 		sunAngle = -1 + moonAngle;
 	}
-	cout << "Moon: " << moonAngle << endl;
-	cout << "Sun: " << sunAngle << endl;
 }
 
 void drawCircleSegment(GLfloat x, GLfloat y, GLfloat radius, GLfloat startAngle, GLfloat endAngle, int lineAmount){
