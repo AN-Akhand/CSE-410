@@ -5,6 +5,8 @@
 #include <cmath>
 #include <iostream>
 
+using namespace std;
+
 int frameCount = 0;
 int refreshMillis = 10;
 
@@ -21,9 +23,28 @@ GLfloat pendulumAngle = 45.0f;
 
 GLfloat dPendulumAngle = 0.0f;
 
+GLfloat sunAngle = 0.0f;
+GLfloat moonAngle = 0.0f;
+
 GLfloat w = M_PI;
 
 int t = 0;
+
+void getSunMoonAngle(){
+	SYSTEMTIME time;
+	GetLocalTime(&time);
+	if(time.wHour >= 5 && time.wHour < 17){
+		sunAngle = (time.wHour - 5) + time.wMinute / 60.0f;
+		sunAngle = sunAngle / 12.0f;
+		moonAngle = -1 + sunAngle;
+	}
+	else{
+		time.wHour = time.wHour <= 5 ? time.wHour + 24 : time.wHour;
+		moonAngle = (time.wHour - 17) + time.wMinute / 60.0f;
+		moonAngle = moonAngle / 12.0f;
+		sunAngle = -1 + moonAngle;
+	}
+}
 
 void initClockAngles(){
 	SYSTEMTIME time;
@@ -31,6 +52,37 @@ void initClockAngles(){
 	secondAngle = -6.0f * time.wSecond;
 	minuteAngle = -6.0f * time.wMinute - 0.1f * time.wSecond;
 	hourAngle = -30.0f * (time.wHour % 12) - 0.5f * time.wMinute - 0.5f/60.0f * time.wSecond;
+	if(time.wHour >= 5 && time.wHour < 17){
+		sunAngle = (time.wHour - 5) + time.wMinute / 60.0f;
+		sunAngle = sunAngle / 12.0f;
+		moonAngle = -1 + sunAngle;
+	}
+	else{
+		time.wHour = time.wHour <= 5 ? time.wHour + 24 : time.wHour;
+		moonAngle = (time.wHour - 17) + time.wMinute / 60.0f;
+		moonAngle = moonAngle / 12.0f;
+		sunAngle = -1 + moonAngle;
+	}
+	cout << "Moon: " << moonAngle << endl;
+	cout << "Sun: " << sunAngle << endl;
+}
+
+void drawCircleSegment(GLfloat x, GLfloat y, GLfloat radius, GLfloat startAngle, GLfloat endAngle, int lineAmount){
+	glLineWidth(1);
+
+	int i;
+	GLfloat twicePi = 2.0f * M_PI;
+
+	glBegin(GL_LINE_STRIP);
+		for(i = 0; i <= lineAmount;i++) {
+			if(i * twicePi / lineAmount >= startAngle && i * twicePi / lineAmount <= endAngle){
+				glVertex2f(
+				    x + (radius * cos(i *  twicePi / lineAmount)),
+				    y + (radius* sin(i * twicePi / lineAmount))
+				);
+			}
+		}
+	glEnd();
 }
 
 void drawHollowCircle(GLfloat x, GLfloat y, GLfloat radius, int lineAmount){
@@ -66,6 +118,49 @@ void drawFilledCircle(GLfloat x, GLfloat y, GLfloat radius, int lineAmount){
 	glEnd();
 }
 
+void drawSun(){
+	glPushMatrix();
+		glScalef(0.7, 0.7, 0.7);
+		glColor3f(1.0f,1.0f,0.0f);  // Yellow
+		drawFilledCircle(0,0,0.1,100);
+		for(int i = 0; i < 8; i++){
+			glBegin(GL_LINE_STRIP);
+		    	for(float i = 0; i <= 5 * M_PI; i += 0.01){
+		    		glVertex2f( 0.01f * sin(i), 0.0185f/2 * i);
+		    	}
+			glEnd();
+			glRotatef(45, 0, 0, 1);
+		}
+	glPopMatrix();
+}
+
+void drawMoon(){
+	glPushMatrix();
+		glScalef(0.5, 0.5, 0.5);
+		glColor3f(0.85f,0.85f,0.85f);
+		drawFilledCircle(0,0,0.1,100);
+	glPopMatrix();
+}
+
+void drawSunMoon(){
+	glPushMatrix();
+		glColor3f(1.0f,1.0f,1.0f);
+		glTranslatef(0, -1.45, 0);
+		drawCircleSegment(0.0, 0.0, 0.78, M_PI / 2 - 0.6702633602, M_PI/2 + 0.6702633602, 100);
+		GLfloat theta;
+		if(sunAngle >= 0){
+			theta = M_PI / 2 - 0.6702633602 + sunAngle * (0.6702633602 * 2);
+			glTranslatef(0.78*cos(theta), 0.78 * sin(theta), 0);
+			drawSun();
+		}
+		else if(moonAngle >= 0){
+			theta = M_PI / 2 - 0.6702633602 + moonAngle * (0.6702633602 * 2);
+			glTranslatef(0.78*cos(theta), 0.78 * sin(theta), 0);
+			drawMoon();
+		}
+	glPopMatrix();
+}
+
 void drawClockMarkings(){
 	glColor3f(1.0f,1.0f,1.0f);  // White
 	glTranslatef(0, 0, 0);
@@ -91,11 +186,11 @@ void drawClockMarkings(){
 
 void drawClockFrame(){
 	glTranslatef(0, 0, 0);
-	glColor3f(0.0, abs(sin(w/2 * t/100)), abs(cos(w/2 * t/100)));
+	glColor3f(0.0, abs(sin(w * t/100)), abs(cos(w * t/100)));
 	glBegin(GL_POLYGON);
 		glVertex2f( -0.75f, 0.63f);
 		glVertex2f( -0.75f, -0.58f);
-		glVertex2f( 0.0f, -1.45f);
+		glVertex2f( 0.0f, -1.5f);
 		glVertex2f( 0.75f, -0.58f);
 		glVertex2f( 0.75f, 0.63f);
 	glEnd();
@@ -109,11 +204,10 @@ void drawClockFrame(){
 	glEnd();
 }
 
-
 void drawClockBody(){
 	glPushMatrix();
 		drawClockFrame();
-		glColor3f(abs(cos(w/2 * t/100)), 0.0, abs(sin(w/2 * t/100)));
+		glColor3f(abs(cos(w * t/100)), 0.0, abs(sin(w * t/100)));
 		glTranslatef(0, 0, 0);
 		drawFilledCircle(0,0,0.55,100);
 		glColor3f(0.0f,0.0f,0.0f);
@@ -123,7 +217,7 @@ void drawClockBody(){
 }
 
 void drawPendulumPivot(){
-	glColor3f(abs(cos(w/2 * t/100)), 0.0, abs(sin(w/2 * t/100)));
+	glColor3f(abs(cos(w * t/100)), 0.0, abs(sin(w * t/100)));
 	glTranslatef(0, 0, 0);
 	drawFilledCircle(0,0,0.03,100);
 }
@@ -132,19 +226,19 @@ void drawPendulumRod(){
 	glLineWidth(6);
 	glTranslatef(0, 0, 0);
 	glBegin(GL_LINES);  // Each set of 2 vertices form a line of single pixel width
-		glColor3f(abs(cos(w/2 * t/100)), 0.0, abs(sin(w/2 * t/100)));
+		glColor3f(abs(cos(w * t/100)), 0.0, abs(sin(w * t/100)));
 	    glVertex2f( 0.0f, -0.01f);
 		glColor3f(0.5f,0.5f,0.5f);
 	    glVertex2f( 0.0f, -0.25f);
 		glColor3f(0.5f,0.5f,0.5f);
 	    glVertex2f( 0.0f, -0.25f);
-		glColor3f(abs(sin(w * t/100)), abs(cos(w * t/100)), 0.0);
+		glColor3f(0.0, abs(sin(w * t/100)), abs(cos(w * t/100)));
 	    glVertex2f( 0.0f, -0.5f);
 	glEnd();
 }
 
 void drawPendulumBob(){
-	glColor3f(abs(sin(w * t/100)), abs(cos(w * t/100)), 0.0);
+	glColor3f(0.0, abs(sin(w * t/100)), abs(cos(w * t/100)));
 	glTranslatef(0, 0, 0);
 	drawFilledCircle(0,-0.48,0.05,100);
 }
@@ -210,6 +304,41 @@ void drawHourHand(){
 	glPopMatrix();
 }
 
+void drawCovers(){
+	glPushMatrix();
+		glTranslatef(0, -1.4, 0);
+		GLfloat theta = M_PI / 2 - 0.6702633602;
+		glBegin(GL_QUADS);
+			glColor3f(0.0, abs(sin(w * t/100)), abs(cos(w * t/100)));
+			glVertex2d(0.9 * cos(theta), 0.9 * sin(theta));
+			glVertex2d(0.6 * cos(theta), 0.6 * sin(theta));
+			glVertex2d(0.6 * cos(theta), 0.6 * sin(theta) - 0.12);
+			glVertex2d(0.9 * cos(theta), 0.9 * sin(theta) - 0.12);
+
+			glColor3f(0,0,0);
+			glVertex2d(0.6 * cos(theta), 0.6 * sin(theta) - 0.12);
+			glVertex2d(0.9 * cos(theta), 0.9 * sin(theta) - 0.12);
+			glVertex2d(0.9 * cos(theta) + 0.5, 0.9 * sin(theta));
+			glVertex2d(0.6 * cos(theta) + 0.5, 0.6 * sin(theta));
+		glEnd();
+		glRotatef(180, 0, 1, 0);
+		glBegin(GL_QUADS);
+			glColor3f(0.0, abs(sin(w * t/100)), abs(cos(w * t/100)));
+			glVertex2d(0.9 * cos(theta), 0.9 * sin(theta));
+			glVertex2d(0.6 * cos(theta), 0.6 * sin(theta));
+			glVertex2d(0.6 * cos(theta), 0.6 * sin(theta) - 0.12);
+			glVertex2d(0.9 * cos(theta), 0.9 * sin(theta) - 0.12);
+
+			glColor3f(0,0,0);
+			glVertex2d(0.6 * cos(theta), 0.6 * sin(theta) - 0.12);
+			glVertex2d(0.9 * cos(theta), 0.9 * sin(theta) - 0.12);
+			glVertex2d(0.9 * cos(theta) + 0.5, 0.9 * sin(theta));
+			glVertex2d(0.6 * cos(theta) + 0.5, 0.6 * sin(theta));
+		glEnd();
+
+	glPopMatrix();
+
+}
 
 /* Handler for window-repaint event. Call back when the window first appears and
    whenever the window needs to be re-painted. */
@@ -231,7 +360,11 @@ void display() {
 
 	drawSecondHand();
 
+	drawSunMoon();
+
 	drawPendulum();
+
+	drawCovers();
 
     glFlush();  // Render now
 }
@@ -261,7 +394,10 @@ void timer(int value){
 
 	pendulumAngle = 45.0f * cos(w * t/100);
 
-	if(t == 1000) t = 0;
+	if(t == 1000) {
+		getSunMoonAngle();
+		t = 0;
+	}
 
 	glutPostRedisplay();    // Post re-paint request to activate display()
 	glutTimerFunc(refreshMillis, timer, 0);             // First timer call immediately
