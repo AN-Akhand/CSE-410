@@ -3,6 +3,10 @@
 
 using namespace std;
 
+#ifndef MATVEC_H
+#define MATVEC_H
+
+
 class Matrix {
 
 public:
@@ -239,3 +243,4 @@ public:
         return result;
     }
 };
+#endif //MATRIX_H

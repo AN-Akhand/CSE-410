@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "*.txt": "cmake-cache",
+        "iostream": "cpp",
+        "iosfwd": "cpp",
+        "fstream": "cpp"
+    }
+}
