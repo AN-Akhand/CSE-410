@@ -197,6 +197,30 @@ public:
         return is;
     }
 
+    static Matrix getCrossProduct(const Matrix &m1, const Matrix &m2){
+        Matrix result(4, 1);
+        result.data[0][0] = m1.data[1][0] * m2.data[2][0] - m1.data[2][0] * m2.data[1][0];
+        result.data[1][0] = m1.data[2][0] * m2.data[0][0] - m1.data[0][0] * m2.data[2][0];
+        result.data[2][0] = m1.data[0][0] * m2.data[1][0] - m1.data[1][0] * m2.data[0][0];
+        result.data[3][0] = 0;
+        return result;
+    }
+
+    static double getDotProduct(const Matrix &m1, const Matrix &m2){
+        double result = 0;
+        for(int i = 0; i < 3; i++){
+            result += m1.data[i][0] * m2.data[i][0];
+        }
+        return result;
+    }
+
+    void normalize(){
+        double length = sqrt(getDotProduct(*this, *this));
+        for(int i = 0; i < 3; i++){
+            data[i][0] /= length;
+        }
+    }
+
     static Matrix getIdentityMatrix(int n){
         Matrix result(n);
         for(int i = 0; i < n; i++){
@@ -207,27 +231,10 @@ public:
         return result;
     }
 
-    Matrix getCrossProduct(const Matrix &m){
+    static Matrix getVectFromPoints(const Matrix &p1, const Matrix &p2){
         Matrix result(3, 1);
-        result.data[0][0] = data[1][0] * m.data[2][0] - data[2][0] * m.data[1][0];
-        result.data[1][0] = data[2][0] * m.data[0][0] - data[0][0] * m.data[2][0];
-        result.data[2][0] = data[0][0] * m.data[1][0] - data[1][0] * m.data[0][0];
-        return result;
-    }
-
-    double getDotProduct(const Matrix &m){
-        double result = 0;
         for(int i = 0; i < 3; i++){
-            result += data[i][0] * m.data[i][0];
-        }
-        return result;
-    }
-
-    Matrix normalize(){
-        Matrix result(this->rows, 1);
-        double length = sqrt(getDotProduct(*this));
-        for(int i = 0; i < 3; i++){
-            result.data[i][0] = data[i][0] / length;
+            result.data[i][0] = p2.data[i][0] - p1.data[i][0];
         }
         return result;
     }
