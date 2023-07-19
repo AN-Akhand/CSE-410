@@ -8,19 +8,22 @@ using namespace std;
 
 void stage1();
 void stage2(Matrix V);
+void stage3(Matrix P);
 
 int triangleCount = 0;
 ifstream fin;
 ofstream fout;
 Matrix point(4, 1);
-Matrix p(3,1);
+Matrix temp(3,1);
 
-int main(){
+int main(int argc, char** argv){
 
     cout.precision(7);
     fout.precision(7);
 
-    fin.open("scene.txt");
+    string path = "Test Cases/" + string(argv[1]) + "/scene.txt";
+
+    fin.open(path);
     fout.open("stage1.txt");
 
 
@@ -54,12 +57,30 @@ int main(){
 
     Matrix V = R * T;
 
+    double fovx = fovy * aspect;
+    double t = near * tan(fovy * M_PI / 360);
+    double rr = near * tan(fovx * M_PI / 360);
+
+    Matrix P = Matrix::getIdentityMatrix(4);
+    P.data[0][0] = near / rr;
+    P.data[1][1] = near / t;
+    P.data[2][2] = -(far + near) / (far - near);
+    P.data[3][3] = 0;
+    P.data[2][3] = -(2 * far * near) / (far - near);
+    P.data[3][2] = -1;
+
+
     stage1();
 
     fin.open("stage1.txt");
     fout.open("stage2.txt");
 
     stage2(V);
+
+    fin.open("stage2.txt");
+    fout.open("stage3.txt");
+
+    stage3(P);
 
 }
 
@@ -74,28 +95,27 @@ void stage1(){
         if(command == "triangle"){
             triangleCount++;
             for(int i = 0; i < 3; i++){
-                fin >> p;
-                Matrix point = getPointMatrix(p);
-                Matrix t = curr * point;
-                printPoint(t, fout);
+                fin >> temp;
+                Matrix point = getPointMatrix(temp);
+                printPoint(transform(point, curr), fout);
             }
             fout << endl;
         }
         else if(command == "translate"){
-            fin >> p;
-            Matrix translation = getTranslationMatrix(p);
+            fin >> temp;
+            Matrix translation = getTranslationMatrix(temp);
             curr = curr * translation;
         }
         else if(command == "scale"){
-            fin >> p;
-            Matrix scale = getScaleMatrix(p);
+            fin >> temp;
+            Matrix scale = getScaleMatrix(temp);
             curr = curr * scale;
         }
         else if(command == "rotate"){
             double angle;
             fin >> angle;
-            fin >> p;
-            Matrix rotation = getRotationMatrix(angle, p);
+            fin >> temp;
+            Matrix rotation = getRotationMatrix(angle, temp);
             curr = curr * rotation;
         }
         else if(command == "push"){
@@ -116,9 +136,22 @@ void stage1(){
 void stage2(Matrix V){
     for(int i = 0; i < triangleCount; i++){
         for(int i = 0; i < 3; i++){
-            fin >> p;
-            point = getPointMatrix(p);
-            printPoint(V * point, fout);
+            fin >> temp;
+            point = getPointMatrix(temp);
+            printPoint(transform(point, V), fout);
+        }
+        fout << endl;
+    }
+    fin.close();
+    fout.close();
+}
+
+void stage3(Matrix P){
+    for(int i = 0; i < triangleCount; i++){
+        for(int i = 0; i < 3; i++){
+            fin >> temp;
+            point = getPointMatrix(temp);
+            printPoint(transform(point, P), fout);
         }
         fout << endl;
     }
@@ -127,5 +160,5 @@ void stage2(Matrix V){
 }
 
 void stage3(){
-    
+
 }

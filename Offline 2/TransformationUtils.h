@@ -126,4 +126,13 @@ Matrix getRotationMatrix(double angle, Matrix p){
     }
     return rotation;
 }
+
+Matrix transform(Matrix point, Matrix transformation){
+    Matrix result = transformation * point;
+    for(int i = 0; i < 4; i++){
+        result.data[i][0] /= result.data[3][0];
+    }
+    return result;
+}  
+
 #endif // TRANSFORMATIONUTILS_H
