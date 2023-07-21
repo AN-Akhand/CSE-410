@@ -127,6 +127,16 @@ public:
         return result;
     }
 
+    Matrix operator/(const double &d) {
+        Matrix result(rows, cols);
+        if (d == 0) {
+            cout << "Error: Division by zero." << endl;
+            return result;
+        }
+        result = *this * (1 / d);
+        return result;
+    }
+
     Matrix getInverseMatrix() {
         Matrix result(rows, cols);
         if (rows != cols) {
@@ -172,7 +182,7 @@ public:
         return result;
     }
 
-    Matrix getTransposeMatrix() {
+    Matrix getTransposeMatrix() const{
         Matrix result(cols, rows);
         for (int i = 0; i < cols; i++) {
             for (int j = 0; j < rows; j++) {
@@ -201,30 +211,6 @@ public:
         return is;
     }
 
-    static Matrix getCrossProduct(const Matrix &m1, const Matrix &m2){
-        Matrix result(4, 1);
-        result.data[0][0] = m1.data[1][0] * m2.data[2][0] - m1.data[2][0] * m2.data[1][0];
-        result.data[1][0] = m1.data[2][0] * m2.data[0][0] - m1.data[0][0] * m2.data[2][0];
-        result.data[2][0] = m1.data[0][0] * m2.data[1][0] - m1.data[1][0] * m2.data[0][0];
-        result.data[3][0] = 0;
-        return result;
-    }
-
-    static double getDotProduct(const Matrix &m1, const Matrix &m2){
-        double result = 0;
-        for(int i = 0; i < 3; i++){
-            result += m1.data[i][0] * m2.data[i][0];
-        }
-        return result;
-    }
-
-    void normalize(){
-        double length = sqrt(getDotProduct(*this, *this));
-        for(int i = 0; i < 3; i++){
-            data[i][0] /= length;
-        }
-    }
-
     static Matrix getIdentityMatrix(int n){
         Matrix result(n);
         for(int i = 0; i < n; i++){
@@ -234,10 +220,48 @@ public:
         }
         return result;
     }
+};
+class Vector : public Matrix{
+public:
+    Vector(int n) : Matrix(n, 1){}
+    Vector(const Matrix &m) : Matrix(4, 1){
+        data[0][0] = m.data[0][0];
+        data[1][0] = m.data[1][0];
+        data[2][0] = m.data[2][0];
+        data[3][0] = 0;
+    }
+    Vector(const Vector &v) : Matrix(v){}
+    Vector(double x, double y, double z) : Matrix(4, 1){
+        data[0][0] = x;
+        data[1][0] = y;
+        data[2][0] = z;
+        data[3][0] = 0;
+    }
 
-    static Matrix getVectFromPoints(const Matrix &p1, const Matrix &p2){
-        Matrix result(3, 1);
+
+    double dot(const Vector &v){
+        return (this->getTransposeMatrix() * v).data[0][0];
+    }
+
+    Vector cross(const Vector &v){
+        Vector result(4);
+        result.data[0][0] = data[1][0] * v.data[2][0] - data[2][0] * v.data[1][0];
+        result.data[1][0] = data[2][0] * v.data[0][0] - data[0][0] * v.data[2][0];
+        result.data[2][0] = data[0][0] * v.data[1][0] - data[1][0] * v.data[0][0];
+        result.data[3][0] = 0;
+        return result;
+    }
+
+    void normalize(){
+        double length = sqrt(dot(*this));
         for(int i = 0; i < 3; i++){
+            data[i][0] /= length;
+        }
+    }
+
+    static Vector getVectorFromPoints(const Matrix &p1, const Matrix &p2){
+        Vector result(4);
+        for(int i = 0; i < 4; i++){
             result.data[i][0] = p2.data[i][0] - p1.data[i][0];
         }
         return result;

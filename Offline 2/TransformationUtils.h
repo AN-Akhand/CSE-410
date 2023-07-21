@@ -29,24 +29,6 @@ Matrix getPointMatrix(Matrix p){
     return point;
 }
 
-Matrix getVectorMatrix(double x, double y, double z){
-    Matrix vector = Matrix(4, 1);
-    vector.data[0][0] = x;
-    vector.data[1][0] = y;
-    vector.data[2][0] = z;
-    vector.data[3][0] = 0;
-    return vector;
-}
-
-Matrix getVectorMatrix(Matrix p){
-    Matrix vector = Matrix(4, 1);
-    vector.data[0][0] = p.data[0][0];
-    vector.data[1][0] = p.data[1][0];
-    vector.data[2][0] = p.data[2][0];
-    vector.data[3][0] = 0;
-    return vector;
-}
-
 Matrix getTranslationMatrix(double x, double y, double z){
     Matrix translation = Matrix::getIdentityMatrix(4);
     translation.data[0][3] = x;
@@ -79,25 +61,25 @@ Matrix getScaleMatrix(Matrix p){
     return scale;
 }
 
-Matrix applyRodriguesFormula(Matrix x, Matrix a, double angle){
+Matrix applyRodriguesFormula(Vector x, Vector a, double angle){
     double rad = angle * M_PI / 180;
     double c = cos(rad);
     double s = sin(rad);
     a.normalize();
-    return x * c + a * (1 - c) * Matrix::getDotProduct(a, x) + Matrix::getCrossProduct(a, x) * s;
+    return x * c + a * (1 - c) * a.dot(x) + a.cross(x) * s;
 }
 
 Matrix getRotationMatrix(double angle, double x, double y, double z){
     Matrix rotation = Matrix::getIdentityMatrix(4);
 
-    Matrix a = getVectorMatrix(x, y, z);
-    Matrix i = getVectorMatrix(1, 0, 0);
-    Matrix j = getVectorMatrix(0, 1, 0);
-    Matrix k = getVectorMatrix(0, 0, 1);
+    Vector a = Vector(x, y, z);
+    Vector i = Vector(1, 0, 0);
+    Vector j = Vector(0, 1, 0);
+    Vector k = Vector(0, 0, 1);
 
-    Matrix c1 = applyRodriguesFormula(i, a, angle);
-    Matrix c2 = applyRodriguesFormula(j, a, angle);
-    Matrix c3 = applyRodriguesFormula(k, a, angle);
+    Vector c1 = applyRodriguesFormula(i, a, angle);
+    Vector c2 = applyRodriguesFormula(j, a, angle);
+    Vector c3 = applyRodriguesFormula(k, a, angle);
 
     for(int i = 0; i < 3; i++){
         rotation.data[i][0] = c1.data[i][0];
@@ -110,14 +92,14 @@ Matrix getRotationMatrix(double angle, double x, double y, double z){
 Matrix getRotationMatrix(double angle, Matrix p){
     Matrix rotation = Matrix::getIdentityMatrix(4);
 
-    Matrix a = getVectorMatrix(p);
-    Matrix i = getVectorMatrix(1, 0, 0);
-    Matrix j = getVectorMatrix(0, 1, 0);
-    Matrix k = getVectorMatrix(0, 0, 1);
+    Vector a = Vector(p);
+    Vector i = Vector(1, 0, 0);
+    Vector j = Vector(0, 1, 0);
+    Vector k = Vector(0, 0, 1);
 
-    Matrix c1 = applyRodriguesFormula(i, a, angle);
-    Matrix c2 = applyRodriguesFormula(j, a, angle);
-    Matrix c3 = applyRodriguesFormula(k, a, angle);
+    Vector c1 = applyRodriguesFormula(i, a, angle);
+    Vector c2 = applyRodriguesFormula(j, a, angle);
+    Vector c3 = applyRodriguesFormula(k, a, angle);
 
     for(int i = 0; i < 3; i++){
         rotation.data[i][0] = c1.data[i][0];
@@ -129,9 +111,7 @@ Matrix getRotationMatrix(double angle, Matrix p){
 
 Matrix transform(Matrix point, Matrix transformation){
     Matrix result = transformation * point;
-    for(int i = 0; i < 4; i++){
-        result.data[i][0] /= result.data[3][0];
-    }
+    result = result / result.data[3][0];
     return result;
 }  
 

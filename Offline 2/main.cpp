@@ -21,7 +21,7 @@ int main(int argc, char** argv){
     cout.precision(7);
     fout.precision(7);
 
-    string path = "Test Cases/" + string(argv[1]) + "/scene.txt";
+    string path = string(argv[1]);
 
     fin.open(path);
     fout.open("stage1.txt");
@@ -36,12 +36,12 @@ int main(int argc, char** argv){
     Matrix eye = getPointMatrix(eyex, eyey, eyez);
     Matrix look = getPointMatrix(lookx, looky, lookz);
 
-    Matrix l = Matrix::getVectFromPoints(eye, look);
+    Vector l = Vector::getVectorFromPoints(eye, look);
     l.normalize();
-    Matrix up = getVectorMatrix(upx, upy, upz);
-    Matrix r = Matrix::getCrossProduct(l, up);
+    Vector up = Vector(upx, upy, upz);
+    Vector r = l.cross(up);
     r.normalize();
-    Matrix u = Matrix::getCrossProduct(r, l);
+    Vector u = r.cross(l);
 
     Matrix T = Matrix::getIdentityMatrix(4);
     T.data[0][3] = -eyex;
@@ -157,8 +157,4 @@ void stage3(Matrix P){
     }
     fin.close();
     fout.close();
-}
-
-void stage3(){
-
 }
