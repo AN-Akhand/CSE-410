@@ -32,4 +32,4 @@
 *.app
 
 # Specific files
-Offline 2/stage*.txt
+Offline 2/*.txt

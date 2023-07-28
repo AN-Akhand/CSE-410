@@ -21,7 +21,7 @@ int main(int argc, char** argv){
     cout.precision(7);
     fout.precision(7);
 
-    string path = string(argv[1]);
+    string path = string("scene.txt");
 
     fin.open(path);
     fout.open("stage1.txt");
