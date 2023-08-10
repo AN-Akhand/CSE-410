@@ -150,6 +150,10 @@ void stage4(){
         double AC_y = top.y - right.y;
         double AC_z = top.z - right.z;
 
+        double BC_x = right.x - left.x;
+        double BC_y = right.y - left.y;
+        double BC_z = right.z - left.z;
+
         max_y = min(max_y, top_y);
         min_y = max(min_y, bottom_y);
 
@@ -159,14 +163,31 @@ void stage4(){
 
         for(int i = top_scanline + 1; i <= bottom_scanline; i++){
             double y = top_y - i * dy;
-            
-            double t1 = (y - top.y) / AB_y;
-            double t2 = (y - top.y) / AC_y;
 
-            double x1, x2;
+            double x1, x2, t1, t2, t3;
 
-            x1 = top.x + t1 * AB_x;
-            x2 = top.x + t2 * AC_x;
+            t1 = (y - top.y) / AB_y;
+            t2 = (y - top.y) / AC_y;
+
+            if(BC_y == 0){
+                x1 = top.x + t1 * AB_x;
+                x2 = top.x + t2 * AC_x;
+            }
+            else{
+                t3 = (y - left.y) / BC_y;
+                if(abs(t1) > 1.0){
+                    x1 = left.x + t3 * BC_x;
+                    x2 = top.x + t2 * AC_x;
+                }
+                else if(abs(t2) > 1.0){
+                    x1 = top.x + t1 * AB_x;
+                    x2 = left.x + t3 * BC_x;
+                }
+                else{
+                    x1 = top.x + t1 * AB_x;
+                    x2 = top.x + t2 * AC_x;
+                }
+            }
 
             x1 = max(x1, left_x);
             x2 = min(x2, right_x);
@@ -177,8 +198,26 @@ void stage4(){
             for(int j = left_column; j <= right_column; j++){
                 
                 double x = left_x + j * dx;
-                double z1 = top.z + t1 * AB_z;
-                double z2 = top.z + t2 * AC_z;
+
+                double z1, z2;
+                if(BC_y == 0){
+                    z1 = top.z + t1 * AB_z;
+                    z2 = top.z + t2 * AC_z;
+                }
+                else{
+                    if(abs(t1) > 1.0){
+                        z1 = left.z + t3 * BC_z;
+                        z2 = top.z + t2 * AC_z;
+                    }
+                    else if(abs(t2) > 1.0){
+                        z1 = top.z + t1 * AB_z;
+                        z2 = left.z + t3 * BC_z;
+                    }
+                    else{
+                        z1 = top.z + t1 * AB_z;
+                        z2 = top.z + t2 * AC_z;
+                    }
+                }
                 double z = z1 + (x - x1) * (z2 - z1) / (x2 -x1);
 
                 if(z < z_buffer[i][j] && z > z_min){
