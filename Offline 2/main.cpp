@@ -142,9 +142,11 @@ void stage4(){
         Point left = triangle.p1.x == min_x ? triangle.p1 : triangle.p2.x == min_x ? triangle.p2 : triangle.p3;
         Point right = triangle.p1.x == max_x ? triangle.p1 : triangle.p2.x == max_x ? triangle.p2 : triangle.p3;
 
+        double AB_x = top.x - left.x;
         double AB_y = top.y - left.y;
         double AB_z = top.z - left.z;
 
+        double AC_x = top.x - right.x;
         double AC_y = top.y - right.y;
         double AC_z = top.z - right.z;
 
@@ -157,21 +159,14 @@ void stage4(){
 
         for(int i = top_scanline + 1; i <= bottom_scanline; i++){
             double y = top_y - i * dy;
+            
+            double t1 = (y - top.y) / AB_y;
+            double t2 = (y - top.y) / AC_y;
 
             double x1, x2;
-            if(y == top.y){
-                x1 = top.x;
-            }
-            else{
-                x1 = top.x + (y - top.y) / (left.y - top.y) * (left.x - top.x);
-            }
 
-            if(y == top.y){
-                x2 = top.x;
-            }
-            else{
-                x2 = top.x + (y - top.y) * (right.x - top.x) / (right.y - top.y);
-            }
+            x1 = top.x + t1 * AB_x;
+            x2 = top.x + t2 * AC_x;
 
             x1 = max(x1, left_x);
             x2 = min(x2, right_x);
@@ -182,9 +177,7 @@ void stage4(){
             for(int j = left_column; j <= right_column; j++){
                 
                 double x = left_x + j * dx;
-                double t1 = (y - top.y) / AB_y;
                 double z1 = top.z + t1 * AB_z;
-                double t2 = (y - top.y) / AC_y;
                 double z2 = top.z + t2 * AC_z;
                 double z = z1 + (x - x1) * (z2 - z1) / (x2 -x1);
 
