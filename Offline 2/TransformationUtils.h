@@ -7,8 +7,8 @@
 #ifndef TRANSFORMATIONUTILS_H
 #define TRANSFORMATIONUTILS_H
 
-void printPoint(Matrix p, ofstream &os){
-    os << fixed << p.data[0][0] << " " << p.data[1][0] << " " << p.data[2][0] << endl;
+void printPoint(Matrix p, ostream &os){
+    os << fixed << p.data[0][0] << " " << p.data[1][0] << " " << p.data[2][0] << " " << endl;
 }
 
 Matrix getPointMatrix(double x, double y, double z){
@@ -114,5 +114,12 @@ Matrix transform(Matrix point, Matrix transformation){
     result = result / result.data[3][0];
     return result;
 }  
+
+static unsigned long int g_seed = 1;
+inline int random(){
+    g_seed = (214013 * g_seed + 2531011);
+    return (g_seed >> 16) & 0x7FFF;
+}
+
 
 #endif // TRANSFORMATIONUTILS_H

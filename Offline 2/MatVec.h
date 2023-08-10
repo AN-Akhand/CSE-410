@@ -267,4 +267,4 @@ public:
         return result;
     }
 };
-#endif //MATRIX_H
+#endif //MATVEC_H
