@@ -93,6 +93,80 @@ int main(int argc, char** argv){
 
 }
 
+void stage1(){
+    stack<Matrix> matStack = stack<Matrix>();
+    Matrix curr = Matrix::getIdentityMatrix(4);
+    matStack.push(curr);
+
+    while(true){
+        string command;
+        fin >> command;
+        if(command == "triangle"){
+            triangleCount++;
+            for(int i = 0; i < 3; i++){
+                fin >> temp;
+                Matrix point = getPointMatrix(temp);
+                printPoint(transform(point, curr), fout);
+            }
+            fout << endl;
+        }
+        else if(command == "translate"){
+            fin >> temp;
+            Matrix translation = getTranslationMatrix(temp);
+            curr = curr * translation;
+        }
+        else if(command == "scale"){
+            fin >> temp;
+            Matrix scale = getScaleMatrix(temp);
+            curr = curr * scale;
+        }
+        else if(command == "rotate"){
+            double angle;
+            fin >> angle;
+            fin >> temp;
+            Matrix rotation = getRotationMatrix(angle, temp);
+            curr = curr * rotation;
+        }
+        else if(command == "push"){
+            matStack.push(curr);
+        }
+        else if(command == "pop"){
+            curr = matStack.top();
+            matStack.pop();
+        }
+        else if(command == "end"){
+            break;
+        }
+    }
+    fin.close();
+    fout.close();
+}
+
+void stage2(Matrix V){
+    for(int i = 0; i < triangleCount; i++){
+        for(int i = 0; i < 3; i++){
+            fin >> temp;
+            point = getPointMatrix(temp);
+            printPoint(transform(point, V), fout);
+        }
+        fout << endl;
+    }
+    fin.close();
+    fout.close();
+}
+
+void stage3(Matrix P){
+    for(int i = 0; i < triangleCount; i++){
+        for(int i = 0; i < 3; i++){
+            fin >> temp;
+            point = getPointMatrix(temp);
+            printPoint(transform(point, P), fout);
+        }
+        fout << endl;
+    }
+    fin.close();
+    fout.close();
+}
 
 void stage4(){
     Triangle triangles[triangleCount];
@@ -240,80 +314,8 @@ void stage4(){
 
     image.save_image("out.bmp");
 
-}
-
-
-void stage1(){
-    stack<Matrix> matStack = stack<Matrix>();
-    Matrix curr = Matrix::getIdentityMatrix(4);
-    matStack.push(curr);
-
-    while(true){
-        string command;
-        fin >> command;
-        if(command == "triangle"){
-            triangleCount++;
-            for(int i = 0; i < 3; i++){
-                fin >> temp;
-                Matrix point = getPointMatrix(temp);
-                printPoint(transform(point, curr), fout);
-            }
-            fout << endl;
-        }
-        else if(command == "translate"){
-            fin >> temp;
-            Matrix translation = getTranslationMatrix(temp);
-            curr = curr * translation;
-        }
-        else if(command == "scale"){
-            fin >> temp;
-            Matrix scale = getScaleMatrix(temp);
-            curr = curr * scale;
-        }
-        else if(command == "rotate"){
-            double angle;
-            fin >> angle;
-            fin >> temp;
-            Matrix rotation = getRotationMatrix(angle, temp);
-            curr = curr * rotation;
-        }
-        else if(command == "push"){
-            matStack.push(curr);
-        }
-        else if(command == "pop"){
-            curr = matStack.top();
-            matStack.pop();
-        }
-        else if(command == "end"){
-            break;
-        }
-    }
-    fin.close();
-    fout.close();
-}
-
-void stage2(Matrix V){
-    for(int i = 0; i < triangleCount; i++){
-        for(int i = 0; i < 3; i++){
-            fin >> temp;
-            point = getPointMatrix(temp);
-            printPoint(transform(point, V), fout);
-        }
-        fout << endl;
-    }
-    fin.close();
-    fout.close();
-}
-
-void stage3(Matrix P){
-    for(int i = 0; i < triangleCount; i++){
-        for(int i = 0; i < 3; i++){
-            fin >> temp;
-            point = getPointMatrix(temp);
-            printPoint(transform(point, P), fout);
-        }
-        fout << endl;
-    }
+    z_buffer.clear();
+    image.clear();
     fin.close();
     fout.close();
 }
