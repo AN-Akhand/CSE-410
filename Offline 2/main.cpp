@@ -158,10 +158,10 @@ void stage4(){
         min_y = max(min_y, bottom_y);
 
 
-        int top_scanline = int((top_y - max_y) / dy);
+        int top_scanline = ceil((top_y - max_y) / dy);
         int bottom_scanline = int((top_y - min_y) / dy);
 
-        for(int i = top_scanline + 1; i <= bottom_scanline; i++){
+        for(int i = top_scanline; i <= bottom_scanline; i++){
             double y = top_y - i * dy;
 
             double x1, x2, t1, t2, t3;
