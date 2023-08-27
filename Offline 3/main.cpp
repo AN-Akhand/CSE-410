@@ -109,7 +109,7 @@ void reshape(GLsizei width, GLsizei height) {  // GLsizei for non-negative integ
         gluOrtho2D(-1.0, 1.0, -1.0 / aspect, 1.0 / aspect);
     }*/
     // Enable perspective projection with fovy, aspect, zNear and zFar
-    gluPerspective(45.0f, aspect, 0.1f, 100.0f);
+    gluPerspective(45.0f, aspect, 0.1f, 500.0f);
 }
 
 void drawAll(){
@@ -129,9 +129,6 @@ void display() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);             // To operate on Model-View matrix
     glLoadIdentity();                       // Reset the model-view matrix
-
-    // default arguments of gluLookAt
-    // gluLookAt(0,0,0, 0,0,-100, 0,1,0);
 
     // control viewing (or camera)
     center.x = pos.x + l.x * d;
@@ -334,7 +331,7 @@ void input(){
 /* Main function: GLUT runs as a console application starting at main()  */
 int main(int argc, char** argv) {
     input();
-    pos.x=50;pos.y=50;pos.z=50;
+    pos.x=150;pos.y=100;pos.z=150;
     center.x=0;center.y=0;center.z=0;
     u.x=0;u.y=1;u.z=0;
     calc_vects();
