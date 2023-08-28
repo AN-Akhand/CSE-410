@@ -52,7 +52,7 @@ public:
         return os;
     }
     friend std::istream& operator>>(std::istream& is, Point& p) {
-        is >> p.x >> p.y >> p.z;
+        is >> p.x >> p.z >> p.y;
         return is;
     }
 };
@@ -214,9 +214,9 @@ public:
         c = color;
 
         if (t1 < 0 && t2 < 0) return -1;
-        if (t1 < 0) return t2;
-        if (t2 < 0)  return t1;
-        return (t1 < t2) ? t1 : t2;
+        if (t1 < 0) return t1;
+        if (t2 < 0)  return t2;
+        return (t1 < t2) ? t2 : t1;
     }
 };
 
@@ -310,7 +310,7 @@ public:
     }
 
     double intersect(Color &c, Ray ray){
-        double min_t = 1000000000;
+        double min_t = 1000;
         double t;
         double u, v;
         for (int i = 0; i < 12; i++) {
@@ -320,7 +320,7 @@ public:
                 c = color;
             }
         }
-        if (min_t == 1000000000) return -1;
+        if (min_t == 1000) return -1;
         return min_t;
     }
 };
@@ -334,7 +334,6 @@ public:
     int shine;
 
     Triangle sides[4];
-    Triangle base[2];
 
     void generateFaces(){
         Point top = lowestPoint + Vector(0, height, 0);
@@ -346,14 +345,10 @@ public:
         Triangle t2(top, lowerRight, upperRight);
         Triangle t3(top, upperRight, upperLeft);
         Triangle t4(top, upperLeft, lowerLeft);
-        Triangle t5(lowerLeft, lowerRight, upperRight);
-        Triangle t6(lowerLeft, upperRight, upperLeft);
         sides[0] = t1;
         sides[1] = t2;
         sides[2] = t3;
         sides[3] = t4;
-        base[0] = t5;
-        base[1] = t6;
     }
 
     Pyramid() {}
@@ -392,14 +387,11 @@ public:
         for (int i = 0; i < 4; i++) {
             sides[i].draw();
         }
-        for (int i = 0; i < 2; i++) {
-            base[i].draw();
-        }
         glPopMatrix();
     }
 
     double intersect(Color &c, Ray ray){
-        double min_t = 1000000000;
+        double min_t = 1000;
         double t;
         double u, v;
         for (int i = 0; i < 4; i++) {
@@ -409,14 +401,7 @@ public:
                 c = color;
             }
         }
-        for (int i = 0; i < 2; i++) {
-            t = base[i].intersect(ray, u, v);
-            if (t > 0 && t < min_t) {
-                min_t = t;
-                c = color;
-            }
-        }
-        if (min_t == 1000000000) return -1;
+        if (min_t == 1000) return -1;
         return min_t;
     }
 };
@@ -478,7 +463,7 @@ public:
 Color trace(Ray ray, vector<Sphere> spheres, vector<Cube> cubes, vector<Pyramid> pyramids, CheckerBoard chk, int recLevel){
     Color c(0, 0, 0);
     if (recLevel == 0) return c;
-    double min_t = 1000000000;
+    double min_t = 1000;
     double t;
     Color tempColor;
     for (int i = 0; i < spheres.size(); i++) {
@@ -507,7 +492,7 @@ Color trace(Ray ray, vector<Sphere> spheres, vector<Cube> cubes, vector<Pyramid>
         min_t = t;
         c = tempColor;
     }
-    if (min_t == 1000000000) return c * 255;
+    if (min_t == 1000) return c * 255;
     return c * 255;
 }
 

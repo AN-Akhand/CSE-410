@@ -118,7 +118,7 @@ void capture(){
             image.set_pixel(i, j, 0, 0, 0);
         }
     }
-    Point middle = pos + l * nearPlane;
+    Point middle = pos + l * (nearPlane + d);
     double height = 2 * tan(fovY/2 * M_PI/180) * nearPlane;
     double width = 2 * tan(fovX/2 * M_PI/180) * nearPlane;
     double pixelHeight = height / numberOfPixels;
@@ -131,7 +131,7 @@ void capture(){
             v.normalize();
             Ray ray(pos, v);
             Color c = trace(ray, spheres, cubes, pyramids, chk, recursionLevel);
-            image.set_pixel(i, j, c.r, c.g, c.b);
+            image.set_pixel(j, i, c.r, c.g, c.b);
         }
     }
     image.save_image("out.bmp");
@@ -145,9 +145,7 @@ void display() {
     glLoadIdentity();                       // Reset the model-view matrix
 
     // control viewing (or camera)
-    center.x = pos.x + l.x * d;
-    center.y = pos.y + l.y * d;
-    center.z = pos.z + l.z * d;
+    center = pos + l * d;
     gluLookAt(pos.x,pos.y,pos.z,
               center.x,center.y,center.z, 
               u.x,u.y,u.z);
@@ -301,7 +299,7 @@ int main(int argc, char** argv) {
     calc_vects();
 
     glutInit(&argc, argv);                  // Initialize GLUT
-    glutInitWindowSize(640, 640);           // Set the window's initial width & height
+    glutInitWindowSize(numberOfPixels, numberOfPixels);           // Set the window's initial width & height
     glutInitWindowPosition(50, 50);         // Position the window's initial top-left corner
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGB);	//Depth, Double buffer, RGB color
     glutCreateWindow("Ray Tracing");          // Create a window with the given title
