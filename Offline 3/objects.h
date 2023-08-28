@@ -191,6 +191,7 @@ public:
         is >> s.center >> s.radius >> s.color;
         is >> s.ambient >> s.diffuse >> s.specular >> s.reflection;
         is >> s.shine;
+        s.radius2 = s.radius * s.radius;
         return is;
     }
 
@@ -214,9 +215,9 @@ public:
         c = color;
 
         if (t1 < 0 && t2 < 0) return -1;
-        if (t1 < 0) return t1;
-        if (t2 < 0)  return t2;
-        return (t1 < t2) ? t2 : t1;
+        if (t1 < 0) return t2;
+        if (t2 < 0)  return t1;
+        return (t1 < t2) ? t1 : t2;
     }
 };
 
