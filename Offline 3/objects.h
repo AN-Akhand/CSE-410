@@ -3,8 +3,10 @@
 #include <cmath>
 #include <windows.h>  // for MS Windows
 #include <GL/glut.h>  // GLUT, include glu.h and gl.h
-#ifndef OBJECTS_H
+#include "Matrix.h"
 
+#ifndef OBJECTS_H
+#define OBJECTS_H
 
 class Vector {
 public:
@@ -21,7 +23,7 @@ public:
     double operator*(Vector v) {return x*v.x + y*v.y + z*v.z;}
     Vector operator-() {return Vector(-x, -y, -z);}
     double length() {return sqrt(x*x + y*y + z*z);}
-    void normalize() {double l = length(); x /= l; y /= l; z /= l;}
+    Vector normalize() {double l = length(); x /= l; y /= l; z /= l;return *this;}
     friend std::ostream& operator<<(std::ostream& os, const Vector& v) {
         os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
         return os;
@@ -55,12 +57,34 @@ public:
     }
 };
 
+Vector vectorFromPoints(Point p1, Point p2) {
+    return Vector(p2.x - p1.x, p2.y - p1.y, p2.z - p1.z);
+}
+
+class Ray {
+public:
+    Point start;
+    Vector dir;
+    Ray() {}
+    Ray(Point p, Vector v) {start = p; dir = v.normalize();}
+    Ray(Point p1, Point p2) {start = p2; dir = vectorFromPoints(p1, p2).normalize();}
+    friend std::ostream& operator<<(std::ostream& os, const Ray& r) {
+        os << r.start << " " << r.dir;
+        return os;
+    }
+    friend std::istream& operator>>(std::istream& is, Ray& r) {
+        is >> r.start >> r.dir;
+        return is;
+    }
+};
+
 class Color {
 public:
     double r, g, b;
     Color() {r = 0; g = 0; b = 0;}
     Color(double a, double c, double d) {r = a; g = c; b = d;}
     Color operator=(Color c) {r = c.r; g = c.g; b = c.b; return *this;}
+    Color operator*(double d) {return Color(r*d, g*d, b*d);}
     friend std::ostream& operator<<(std::ostream& os, const Color& c) {
         os << "(" << c.r << ", " << c.g << ", " << c.b << ")";
         return os;
@@ -91,18 +115,74 @@ public:
         glVertex3f(c.x, c.y, c.z);
         glEnd();
     }
+
+    double intersect(Ray ray, double &u, double &v){
+        Vector edge1 = vectorFromPoints(a, b);
+        Vector edge2 = vectorFromPoints(a, c);
+        Vector h = ray.dir ^ edge2;
+        double det = edge1 * h;
+        if (fabs(det) < 0.00001) return -1;
+        double f = 1 / det;
+        Vector s = vectorFromPoints(a, ray.start);
+        u = f * (s * h);
+        if (u < 0.0 || u > 1.0) return -1;
+        Vector q = s ^ edge1;
+        v = f * (ray.dir * q);
+        if (v < 0.0 || u + v > 1.0) return -1;
+        double t = f * (edge2 * q);
+        if (t > 0) return t;
+        return -1;
+    }
+
+    // double intersect(Ray ray){
+    //     Matrix A(3, 3, new double*[3]{
+    //         new double[3]{a.x-b.x, a.x-c.x, ray.dir.x},
+    //         new double[3]{a.y-b.y, a.y-c.y, ray.dir.y},
+    //         new double[3]{a.z-b.z, a.z-c.z, ray.dir.z}
+    //     });
+    //     Matrix B(3, 3, new double*[3]{
+    //         new double[3]{a.x-ray.start.x, a.x-c.x, ray.dir.x},
+    //         new double[3]{a.y-ray.start.y, a.y-c.y, ray.dir.y},
+    //         new double[3]{a.z-ray.start.z, a.z-c.z, ray.dir.z}
+    //     });
+    //     Matrix C(3, 3, new double*[3]{
+    //         new double[3]{a.x-b.x, a.x-ray.start.x, ray.dir.x},
+    //         new double[3]{a.y-b.y, a.y-ray.start.y, ray.dir.y},
+    //         new double[3]{a.z-b.z, a.z-ray.start.z, ray.dir.z}
+    //     });
+    //     Matrix T(3, 3, new double*[3]{
+    //         new double[3]{a.x-b.x, a.x-c.x, a.x-ray.start.x},
+    //         new double[3]{a.y-b.y, a.y-c.y, a.y-ray.start.y},
+    //         new double[3]{a.z-b.z, a.z-c.z, a.z-ray.start.z}
+    //     });
+
+    //     double detA = A.determinant();
+    //     double detB = B.determinant();
+    //     double detC = C.determinant();
+    //     double detT = T.determinant();
+
+    //     double beta = detB / detA;
+    //     double gamma = detC / detA;
+    //     double t = detT / detA;
+
+    //     if (beta >= 0 && gamma >= 0 && beta + gamma <= 1 && t > 0) {
+    //         return t;
+    //     }
+    //     return -1;
+    // }
 };
 
 class Sphere {
 public:
     Point center;
     double radius;
+    double radius2;
     Color color;
     double ambient, diffuse, specular, reflection;
     int shine;
     Sphere() {}
-    Sphere(Point p, double r) {center = p; radius = r;color = Color(1,1,1);}
-    Sphere(Point p, double r, Color c) {center = p; radius = r;color = c;}
+    Sphere(Point p, double r) {center = p; radius = r;color = Color(1,1,1);radius2 = r*r;}
+    Sphere(Point p, double r, Color c) {center = p; radius = r;color = c;radius2 = r*r;}
     friend std::ostream& operator<<(std::ostream& os, const Sphere& s) {
         os << s.center << " " << s.radius;
         return os;
@@ -120,6 +200,23 @@ public:
         glTranslatef(center.x, center.y, center.z);
         glutSolidSphere(radius, 100, 100);
         glPopMatrix();
+    }
+
+    double intersect(Ray ray, Color &c){
+        Vector L = vectorFromPoints(ray.start, center);
+        double t_ca = L * ray.dir;
+        if (t_ca < 0) return -1;
+        double d2 = L * L - t_ca * t_ca;
+        if (d2 > radius2) return -1;
+        double t_hc = sqrt(radius2 - d2);
+        double t1 = t_ca - t_hc;
+        double t2 = t_ca + t_hc;
+        c = color;
+
+        if (t1 < 0 && t2 < 0) return -1;
+        if (t1 < 0) return t2;
+        if (t2 < 0)  return t1;
+        return (t1 < t2) ? t1 : t2;
     }
 };
 
@@ -211,6 +308,21 @@ public:
         }
         glPopMatrix();
     }
+
+    double intersect(Color &c, Ray ray){
+        double min_t = 1000000000;
+        double t;
+        double u, v;
+        for (int i = 0; i < 12; i++) {
+            t = faces[i].intersect(ray, u, v);
+            if (t > 0 && t < min_t) {
+                min_t = t;
+                c = color;
+            }
+        }
+        if (min_t == 1000000000) return -1;
+        return min_t;
+    }
 };
 
 class Pyramid {
@@ -285,7 +397,118 @@ public:
         }
         glPopMatrix();
     }
+
+    double intersect(Color &c, Ray ray){
+        double min_t = 1000000000;
+        double t;
+        double u, v;
+        for (int i = 0; i < 4; i++) {
+            t = sides[i].intersect(ray, u, v);
+            if (t > 0 && t < min_t) {
+                min_t = t;
+                c = color;
+            }
+        }
+        for (int i = 0; i < 2; i++) {
+            t = base[i].intersect(ray, u, v);
+            if (t > 0 && t < min_t) {
+                min_t = t;
+                c = color;
+            }
+        }
+        if (min_t == 1000000000) return -1;
+        return min_t;
+    }
 };
 
-#define OBJECTS_H
+class CheckerBoard {
+public:
+    double width;
+    double ambient, diffuse, reflection;
+
+    CheckerBoard() {}
+    CheckerBoard(double w) {width = w;}
+    CheckerBoard(double w, double a, double d, double r) {width = w; ambient = a; diffuse = d; reflection = r;}
+    friend std::ostream& operator<<(std::ostream& os, const CheckerBoard& c) {
+        os << c.width << " " << c.ambient << " " << c.diffuse << " " << c.reflection;
+        return os;
+    }
+    friend std::istream& operator>>(std::istream& is, CheckerBoard& c) {
+        is >> c.width >> c.ambient >> c.diffuse >> c.reflection;
+        return is;
+    }
+
+    void draw(double draw_distance, Point pos){
+        int noOfSquares = 2 * draw_distance / width;
+        glPushMatrix();
+        glTranslatef(-draw_distance + int(pos.x / width / 2) * width * 2, 0, -draw_distance + int(pos.z / width / 2) * width * 2);
+        for (int i = 0; i < noOfSquares; i++) {
+            for (int j = 0; j < noOfSquares; j++) {
+                if ((i + j) % 2 == 0) {
+                    glColor3f(0, 0, 0);
+                } else {
+                    glColor3f(1, 1, 1);
+                }
+                glBegin(GL_QUADS);
+                glVertex3f(i * width, 0, j * width);
+                glVertex3f(i * width, 0, (j + 1) * width);
+                glVertex3f((i + 1) * width, 0, (j + 1) * width);
+                glVertex3f((i + 1) * width, 0, j * width);
+                glEnd();
+            }
+        }
+        glPopMatrix();
+    }
+
+    double intersect(Color &c, Ray ray){
+        double t = -ray.start.y / ray.dir.y;
+        if (t < 0) return -1;
+        Point p = ray.start + ray.dir * t;
+        int x = int(p.x / width);
+        int z = int(p.z / width);
+        if ((x + z) % 2 == 0) {
+            c = Color(0, 0, 0);
+        } else {
+            c = Color(1, 1, 1);
+        }
+        return t;
+    }
+};
+
+Color trace(Ray ray, vector<Sphere> spheres, vector<Cube> cubes, vector<Pyramid> pyramids, CheckerBoard chk, int recLevel){
+    Color c(0, 0, 0);
+    if (recLevel == 0) return c;
+    double min_t = 1000000000;
+    double t;
+    Color tempColor;
+    for (int i = 0; i < spheres.size(); i++) {
+        t = spheres[i].intersect(ray, tempColor);
+        if (t > 0 && t < min_t) {
+            min_t = t;
+            c = tempColor;
+        }
+    }
+    for (int i = 0; i < cubes.size(); i++) {
+        t = cubes[i].intersect(tempColor, ray);
+        if (t > 0 && t < min_t) {
+            min_t = t;
+            c = tempColor;
+        }
+    }
+    for (int i = 0; i < pyramids.size(); i++) {
+        t = pyramids[i].intersect(tempColor, ray);
+        if (t > 0 && t < min_t) {
+            min_t = t;
+            c = tempColor;
+        }
+    }
+    t = chk.intersect(tempColor, ray);
+    if (t > 0 && t < min_t) {
+        min_t = t;
+        c = tempColor;
+    }
+    if (min_t == 1000000000) return c * 255;
+    return c * 255;
+}
+
 #endif

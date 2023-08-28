@@ -7,58 +7,44 @@
 #include <iostream>
 #include <fstream>
 #include "objects.h"
+#include "bitmap_image.hpp"
 
 using namespace std;
 
 
-struct Point pos;       // position of the eye
-struct Point center;    // position of center
+Point pos;       // position of the eye
+Point center;    // position of center
 double d;               // distance of eye from center
-struct Point l;         // look/forward direction
-struct Point r;         // right direction
-struct Point u;         // up direction
+Vector l;         // look/forward direction
+Vector r;         // right direction
+Vector u;         // up direction
 double angle;           // angle of rotation of eye about center
 
 vector<Sphere> spheres;
 vector<Cube> cubes;
 vector<Pyramid> pyramids;
+CheckerBoard chk;
 int nearPlane, farPlane;
-int fovY;
-int aspectRatio;
+double fovY, fovX;
+double aspectRatio;
 int recursionLevel;
 int numberOfPixels;
-double chkWidth;
-double chkAmbient, chkDiffuse, chkReflection;
 int noOfObjects;
 
 void calc_vects(){
 
     // Calculate the look vector
-    l.x = center.x - pos.x;
-    l.y = center.y - pos.y;
-    l.z = center.z - pos.z;
-    d = sqrt(l.x*l.x + l.y*l.y + l.z*l.z);
-    l.x /= d;
-    l.y /= d;
-    l.z /= d;
+    l = vectorFromPoints(pos, center);
+    l.normalize();
+    d = l.length();
 
     // Calculate the right vector
-    r.x = l.y * u.z - l.z * u.y;
-    r.y = l.z * u.x - l.x * u.z;
-    r.z = l.x * u.y - l.y * u.x;
-    double length = sqrt(r.x*r.x + r.y*r.y + r.z*r.z);
-    r.x /= length;
-    r.y /= length;
-    r.z /= length;
+    r = l ^ u;
+    r.normalize();
 
     // Calculate the up vector
-    u.x = r.y * l.z - r.z * l.y;
-    u.y = r.z * l.x - r.x * l.z;
-    u.z = r.x * l.y - r.y * l.x;
-    length = sqrt(u.x*u.x + u.y*u.y + u.z*u.z);
-    u.x /= length;
-    u.y /= length;
-    u.z /= length;
+    u = r ^ l;
+    u.normalize();
 }
 
 
@@ -73,18 +59,18 @@ void drawAxes() {
     glBegin(GL_LINES);
         glColor3f(1,0,0);   // Red
         // X axis
-        glVertex3f(-1,0,0);
-        glVertex3f(1,0,0);
+        glVertex3f(-1000,0,0);
+        glVertex3f(1000,0,0);
 
         glColor3f(0,1,0);   // Green
         // Y axis
-        glVertex3f(0,-1,0);
-        glVertex3f(0,1,0);
+        glVertex3f(0,-1000,0);
+        glVertex3f(0,1000,0);
 
         glColor3f(0,0,1);   // Blue
         // Z axis
-        glVertex3f(0,0,-1);
-        glVertex3f(0,0,1);
+        glVertex3f(0,0,-1000);
+        glVertex3f(0,0,1000);
     glEnd();
 }
 
@@ -109,7 +95,7 @@ void reshape(GLsizei width, GLsizei height) {  // GLsizei for non-negative integ
         gluOrtho2D(-1.0, 1.0, -1.0 / aspect, 1.0 / aspect);
     }*/
     // Enable perspective projection with fovy, aspect, zNear and zFar
-    gluPerspective(45.0f, aspect, 0.1f, 500.0f);
+    gluPerspective(45.0f, aspect, nearPlane, farPlane);
 }
 
 void drawAll(){
@@ -122,6 +108,34 @@ void drawAll(){
     for(int i=0;i<pyramids.size();i++){
         pyramids[i].draw();
     }
+    chk.draw(farPlane, pos);
+}
+
+void capture(){
+    bitmap_image image(numberOfPixels, numberOfPixels);
+    for(int i = 0; i < numberOfPixels; i++){
+        for(int j = 0; j < numberOfPixels; j++){
+            image.set_pixel(i, j, 0, 0, 0);
+        }
+    }
+    Point middle = pos + l * nearPlane;
+    double height = 2 * tan(fovY/2 * M_PI/180) * nearPlane;
+    double width = 2 * tan(fovX/2 * M_PI/180) * nearPlane;
+    double pixelHeight = height / numberOfPixels;
+    double pixelWidth = width / numberOfPixels;
+    Point topLeft = middle + u * (height/2) - r * (width/2);
+    for(int i = 0; i < numberOfPixels; i++){
+        for(int j = 0; j < numberOfPixels; j++){
+            Point p = topLeft - u * (i * pixelHeight) + r * (j * pixelWidth);
+            Vector v = vectorFromPoints(pos, p);
+            v.normalize();
+            Ray ray(pos, v);
+            Color c = trace(ray, spheres, cubes, pyramids, chk, recursionLevel);
+            image.set_pixel(i, j, c.r, c.g, c.b);
+        }
+    }
+    image.save_image("out.bmp");
+    cout << "Done" << endl;
 }
 
 void display() {
@@ -140,19 +154,6 @@ void display() {
 
     drawAxes();
 
-    // Point p1(0,0,0), p2(2, 6, 2);
-
-    // Sphere s1(p2, 3, Color(1,0,0));
-
-    // s1.draw();
-
-    // Cube c1(p1, 5, Color(0,1,0));
-
-    // c1.draw();
-
-    // Pyramid py1(p1, 5.0, 1.0, Color(0,0,1));
-    // py1.draw();
-
     drawAll();
 
     glutSwapBuffers();  // Render now
@@ -164,64 +165,38 @@ void keyboardListener(unsigned char key, int xx,int yy){
     double len;
 	switch(key){
 
-		case '1':
-			r.x = r.x*cos(rate)+l.x*sin(rate);
-			r.y = r.y*cos(rate)+l.y*sin(rate);
-			r.z = r.z*cos(rate)+l.z*sin(rate);
+        case '0':
+            capture();
+            break;
 
-			l.x = l.x*cos(rate)-r.x*sin(rate);
-			l.y = l.y*cos(rate)-r.y*sin(rate);
-			l.z = l.z*cos(rate)-r.z*sin(rate);
+		case '1':
+            r = r * cos(rate) + l * sin(rate);
+            l = l * cos(rate) - r * sin(rate);
 			break;
 
         case '2':
-			r.x = r.x*cos(-rate)+l.x*sin(-rate);
-			r.y = r.y*cos(-rate)+l.y*sin(-rate);
-			r.z = r.z*cos(-rate)+l.z*sin(-rate);
-
-			l.x = l.x*cos(-rate)-r.x*sin(-rate);
-			l.y = l.y*cos(-rate)-r.y*sin(-rate);
-			l.z = l.z*cos(-rate)-r.z*sin(-rate);
+            r = r * cos(-rate) + l * sin(-rate);
+            l = l * cos(-rate) - r * sin(-rate);
 			break;
 
         case '3':
-			l.x = l.x*cos(rate)+u.x*sin(rate);
-			l.y = l.y*cos(rate)+u.y*sin(rate);
-			l.z = l.z*cos(rate)+u.z*sin(rate);
-
-			u.x = u.x*cos(rate)-l.x*sin(rate);
-			u.y = u.y*cos(rate)-l.y*sin(rate);
-			u.z = u.z*cos(rate)-l.z*sin(rate);
+            l = l * cos(rate) + u * sin(rate);
+            u = u * cos(rate) - l * sin(rate);
 			break;
 
         case '4':
-			l.x = l.x*cos(-rate)+u.x*sin(-rate);
-			l.y = l.y*cos(-rate)+u.y*sin(-rate);
-			l.z = l.z*cos(-rate)+u.z*sin(-rate);
-
-			u.x = u.x*cos(-rate)-l.x*sin(-rate);
-			u.y = u.y*cos(-rate)-l.y*sin(-rate);
-			u.z = u.z*cos(-rate)-l.z*sin(-rate);
+            l = l * cos(-rate) + u * sin(-rate);
+            u = u * cos(-rate) - l * sin(-rate);
 			break;
 
         case '5':
-			u.x = u.x*cos(rate)+r.x*sin(rate);
-			u.y = u.y*cos(rate)+r.y*sin(rate);
-			u.z = u.z*cos(rate)+r.z*sin(rate);
-
-			r.x = r.x*cos(rate)-u.x*sin(rate);
-			r.y = r.y*cos(rate)-u.y*sin(rate);
-			r.z = r.z*cos(rate)-u.z*sin(rate);
+            u = u * cos(rate) + r * sin(rate);
+            r = r * cos(rate) - u * sin(rate);
 			break;
 
         case '6':
-			u.x = u.x*cos(-rate)+r.x*sin(-rate);
-			u.y = u.y*cos(-rate)+r.y*sin(-rate);
-			u.z = u.z*cos(-rate)+r.z*sin(-rate);
-
-			r.x = r.x*cos(-rate)-u.x*sin(-rate);
-			r.y = r.y*cos(-rate)-u.y*sin(-rate);
-			r.z = r.z*cos(-rate)-u.z*sin(-rate);
+            u = u * cos(-rate) + r * sin(-rate);
+            r = r * cos(-rate) - u * sin(-rate);
 			break;
 
         case 'w':
@@ -251,39 +226,27 @@ void keyboardListener(unsigned char key, int xx,int yy){
 
 void specialKeyListener(int key, int x,int y)
 {
-    double rate = 1.0;
+    double rate = 5.0;
 	switch(key){
 		case GLUT_KEY_UP:		//down arrow key
-			pos.x+=l.x * rate;
-			pos.y+=l.y * rate;
-			pos.z+=l.z * rate;
+			pos = pos + l * rate;
 			break;
 		case GLUT_KEY_DOWN:		// up arrow key
-			pos.x-=l.x * rate;
-			pos.y-=l.y * rate;
-			pos.z-=l.z * rate;
+			pos = pos - l * rate;
 			break;
 
 		case GLUT_KEY_RIGHT:
-			pos.x+=r.x * rate;
-			pos.y+=r.y * rate;
-			pos.z+=r.z * rate;
+			pos = pos + r * rate;
 			break;
 		case GLUT_KEY_LEFT :
-			pos.x-=r.x * rate;
-			pos.y-=r.y * rate;
-			pos.z-=r.z * rate;
+			pos = pos - r * rate;
 			break;
 
 		case GLUT_KEY_PAGE_UP:
-		    pos.x+=u.x * rate;
-			pos.y+=u.y * rate;
-			pos.z+=u.z * rate;
+		    pos = pos + u * rate;
 			break;
 		case GLUT_KEY_PAGE_DOWN:
-            pos.x-=u.x * rate;
-			pos.y-=u.y * rate;
-			pos.z-=u.z * rate;
+            pos = pos - u * rate;
 			break;
 
 		case GLUT_KEY_INSERT:
@@ -304,8 +267,9 @@ void input(){
     ifstream fin;
     fin.open("description.txt");
     fin >> nearPlane >> farPlane >> fovY >> aspectRatio >> recursionLevel >> numberOfPixels;
-    fin >> chkWidth >> chkAmbient >> chkDiffuse >> chkReflection;
+    fin >> chk;
     fin >> noOfObjects;
+    fovX = fovY * aspectRatio;
     for(int i=0;i<noOfObjects;i++){
         string type;
         fin >> type;
