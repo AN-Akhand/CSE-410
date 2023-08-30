@@ -1,9 +1,11 @@
+#define _USE_MATH_DEFINES
 #include <vector>
 #include <iostream>
 #include <cmath>
 #include <windows.h>  // for MS Windows
 #include <GL/glut.h>  // GLUT, include glu.h and gl.h
 #include "Matrix.h"
+#include <cstdint>
 
 #ifndef OBJECTS_H
 #define OBJECTS_H
@@ -42,6 +44,7 @@ public:
     Point(double a, double b, double c, double d) {x = a; y = b; z = c; w = d;}
     Point operator+(Vector v) {return Point(x+v.x, y+v.y, z+v.z);}
     Point operator-(Vector v) {return Point(x-v.x, y-v.y, z-v.z);}
+    Vector operator-(Point p) {return Vector(x-p.x, y-p.y, z-p.z);}
     Point operator=(Point p) {x = p.x; y = p.y; z = p.z; w = p.w; return *this;}
     Point operator*(double d) {return Point(x*d, y*d, z*d);}
     Point operator/(double d) {return Point(x/d, y/d, z/d);}
@@ -53,13 +56,10 @@ public:
     }
     friend std::istream& operator>>(std::istream& is, Point& p) {
         is >> p.x >> p.z >> p.y;
+        p.x = -p.x;
         return is;
     }
 };
-
-Vector vectorFromPoints(Point p1, Point p2) {
-    return Vector(p2.x - p1.x, p2.y - p1.y, p2.z - p1.z);
-}
 
 class Ray {
 public:
@@ -67,7 +67,7 @@ public:
     Vector dir;
     Ray() {}
     Ray(Point p, Vector v) {start = p; dir = v.normalize();}
-    Ray(Point p1, Point p2) {start = p2; dir = vectorFromPoints(p1, p2).normalize();}
+    Ray(Point p1, Point p2) {start = p2; dir = (p2 - p1).normalize();}
     friend std::ostream& operator<<(std::ostream& os, const Ray& r) {
         os << r.start << " " << r.dir;
         return os;
@@ -85,6 +85,9 @@ public:
     Color(double a, double c, double d) {r = a; g = c; b = d;}
     Color operator=(Color c) {r = c.r; g = c.g; b = c.b; return *this;}
     Color operator*(double d) {return Color(r*d, g*d, b*d);}
+    Color operator*(Color c) {return Color(r*c.r, g*c.g, b*c.b);}
+    Color operator+(Color c) {return Color(r+c.r, g+c.g, b+c.b);}
+    Color operator+(double d) {return Color(r+d, g+d, b+d);}
     friend std::ostream& operator<<(std::ostream& os, const Color& c) {
         os << "(" << c.r << ", " << c.g << ", " << c.b << ")";
         return os;
@@ -93,6 +96,7 @@ public:
         is >> c.r >> c.g >> c.b;
         return is;
     }
+
 };
 
 class Triangle {
@@ -117,13 +121,13 @@ public:
     }
 
     double intersect(Ray ray, double &u, double &v){
-        Vector edge1 = vectorFromPoints(a, b);
-        Vector edge2 = vectorFromPoints(a, c);
+        Vector edge1 = b - a;
+        Vector edge2 = c - a;
         Vector h = ray.dir ^ edge2;
         double det = edge1 * h;
-        if (fabs(det) < 0.00001) return -1;
+        if (fabs(det) < 1e-5) return -1;
         double f = 1 / det;
-        Vector s = vectorFromPoints(a, ray.start);
+        Vector s = ray.start - a;
         u = f * (s * h);
         if (u < 0.0 || u > 1.0) return -1;
         Vector q = s ^ edge1;
@@ -134,52 +138,94 @@ public:
         return -1;
     }
 
-    // double intersect(Ray ray){
-    //     Matrix A(3, 3, new double*[3]{
-    //         new double[3]{a.x-b.x, a.x-c.x, ray.dir.x},
-    //         new double[3]{a.y-b.y, a.y-c.y, ray.dir.y},
-    //         new double[3]{a.z-b.z, a.z-c.z, ray.dir.z}
-    //     });
-    //     Matrix B(3, 3, new double*[3]{
-    //         new double[3]{a.x-ray.start.x, a.x-c.x, ray.dir.x},
-    //         new double[3]{a.y-ray.start.y, a.y-c.y, ray.dir.y},
-    //         new double[3]{a.z-ray.start.z, a.z-c.z, ray.dir.z}
-    //     });
-    //     Matrix C(3, 3, new double*[3]{
-    //         new double[3]{a.x-b.x, a.x-ray.start.x, ray.dir.x},
-    //         new double[3]{a.y-b.y, a.y-ray.start.y, ray.dir.y},
-    //         new double[3]{a.z-b.z, a.z-ray.start.z, ray.dir.z}
-    //     });
-    //     Matrix T(3, 3, new double*[3]{
-    //         new double[3]{a.x-b.x, a.x-c.x, a.x-ray.start.x},
-    //         new double[3]{a.y-b.y, a.y-c.y, a.y-ray.start.y},
-    //         new double[3]{a.z-b.z, a.z-c.z, a.z-ray.start.z}
-    //     });
-
-    //     double detA = A.determinant();
-    //     double detB = B.determinant();
-    //     double detC = C.determinant();
-    //     double detT = T.determinant();
-
-    //     double beta = detB / detA;
-    //     double gamma = detC / detA;
-    //     double t = detT / detA;
-
-    //     if (beta >= 0 && gamma >= 0 && beta + gamma <= 1 && t > 0) {
-    //         return t;
-    //     }
-    //     return -1;
-    // }
+    Vector getNormal(Point p){
+        Vector edge1 = b - a;
+        Vector edge2 = c - a;
+        Vector normal = edge1 ^ edge2;
+        normal.normalize();
+        return normal;
+    }
 };
 
-class Sphere {
+class Light {
+public:
+    Point pos;
+    Color color;
+    double falloff;
+    Light() {}
+    Light(Point p, Color c) {pos = p; color = c;}
+    Light(Point p, Color c, double f) {pos = p; color = c; falloff = f;}
+    friend std::ostream& operator<<(std::ostream& os, const Light& l) {
+        os << l.pos << " " << l.color << " " << l.falloff;
+        return os;
+    }
+    friend std::istream& operator>>(std::istream& is, Light& l) {
+        is >> l.pos >> l.falloff;
+        l.color = Color(1, 1, 1);
+        return is;
+    }
+
+    void draw(){
+        glPushMatrix();
+        glColor3f(color.r, color.g, color.b);
+        glTranslatef(pos.x, pos.y, pos.z);
+        glutSolidSphere(5, 100, 100);
+        glPopMatrix();
+    }
+};
+
+class SpotLight : public Light{
+public:
+    Vector dir;
+    double angle;
+    SpotLight() {}
+    SpotLight(Point p, Color c, double f, Vector d, double a) {pos = p; color = c; falloff = f; dir = d; angle = a;}
+    friend std::ostream& operator<<(std::ostream& os, const SpotLight& l) {
+        os << l.pos << " " << l.color << " " << l.falloff << " " << l.dir << " " << l.angle;
+        return os;
+    }
+    friend std::istream& operator>>(std::istream& is, SpotLight& l) {
+        Point temp;
+        is >> l.pos >> l.falloff >> temp >> l.angle;
+        l.dir = (temp - l.pos).normalize();
+        l.color = Color(1, 1, 1);
+        return is;
+    }
+
+    void draw(){
+        glPushMatrix();
+        glColor3f(color.r, color.g, color.b);
+        glTranslatef(pos.x, pos.y, pos.z);
+        //draw a cone facing the direction of the light
+        double xRot = acos(dir.y) * 180 / 3.1416;
+        double zRot = acos(dir.x / sqrt(dir.x * dir.x + dir.z * dir.z)) * 180 / M_PI;
+        if (dir.z < 0) zRot = -zRot;
+        glRotatef(xRot, 1, 0, 0);
+        glRotatef(zRot, 0, 0, 1);
+
+        glutSolidCone(5, 20, 100, 100);
+        glPopMatrix();
+    }
+};
+
+class Object{
+public:
+    double ambient, diffuse, specular, reflection;
+    int shine;
+    char type;
+    virtual void draw() = 0;
+    virtual double intersect(Ray ray, Color &c) = 0;
+    virtual boolean intersectLight(Ray ray, double distance) {return -1;}
+    virtual void draw(double draw_distance, Point pos){return;};
+    virtual Vector getNormal(Point p){return Vector(0, 0, 0);};
+};
+
+class Sphere : public Object{
 public:
     Point center;
     double radius;
     double radius2;
     Color color;
-    double ambient, diffuse, specular, reflection;
-    int shine;
     Sphere() {}
     Sphere(Point p, double r) {center = p; radius = r;color = Color(1,1,1);radius2 = r*r;}
     Sphere(Point p, double r, Color c) {center = p; radius = r;color = c;radius2 = r*r;}
@@ -192,6 +238,7 @@ public:
         is >> s.ambient >> s.diffuse >> s.specular >> s.reflection;
         is >> s.shine;
         s.radius2 = s.radius * s.radius;
+        s.type = 's';
         return is;
     }
 
@@ -204,7 +251,7 @@ public:
     }
 
     double intersect(Ray ray, Color &c){
-        Vector L = vectorFromPoints(ray.start, center);
+        Vector L = (center - ray.start);
         double t_ca = L * ray.dir;
         if (t_ca < 0) return -1;
         double d2 = L * L - t_ca * t_ca;
@@ -219,16 +266,36 @@ public:
         if (t2 < 0)  return t1;
         return (t1 < t2) ? t1 : t2;
     }
+
+    boolean intersectLight(Ray ray, double distance){
+        Vector L = (center - ray.start);
+        double t_ca = L * ray.dir;
+        if (t_ca < 0) return false;
+        double d2 = L * L - t_ca * t_ca;
+        if (d2 > radius2) return false;
+        double t_hc = sqrt(radius2 - d2);
+        double t1 = t_ca - t_hc;
+        double t2 = t_ca + t_hc;
+        if (t1 < 1e-5 && t2 < 1e-5) return false;
+        if (t1 < 1e-5) return t2 < distance;
+        if (t2 < 1e-5)  return t1 < distance;
+        return (t1 < t2) ? t1 < distance : t2 < distance;
+    }
+
+    Vector getNormal(Point p){
+        Vector v = (center - p);
+        v.normalize();
+        return v;
+    }
 };
 
-class Cube {
+class Cube : public Object{
 public:
     Triangle faces[12];
     Point lowerLeft;
     double sideLength;
     Color color;
-    double ambient, diffuse, specular, reflection;
-    int shine;
+    Vector normal;
 
     Cube() {}
     Cube(Triangle t[]) {
@@ -238,7 +305,7 @@ public:
         color = Color(1, 1, 1);
     }
 
-        void generateFaces(){
+    void generateFaces(){
         Point lowerRight = lowerLeft + Vector(sideLength, 0, 0);
         Point upperLeft = lowerLeft + Vector(0, sideLength, 0);
         Point upperRight = lowerLeft + Vector(sideLength, sideLength, 0);
@@ -297,6 +364,7 @@ public:
         is >> c.lowerLeft >> c.sideLength >> c.color;
         is >> c.ambient >> c.diffuse >> c.specular >> c.reflection;
         is >> c.shine;
+        c.type = 'c';
         c.generateFaces();
         return is;
     }
@@ -310,7 +378,7 @@ public:
         glPopMatrix();
     }
 
-    double intersect(Color &c, Ray ray){
+    double intersect(Ray ray, Color &c){
         double min_t = 1000;
         double t;
         double u, v;
@@ -319,22 +387,41 @@ public:
             if (t > 0 && t < min_t) {
                 min_t = t;
                 c = color;
+                normal = faces[i].getNormal(ray.start + ray.dir * t);
             }
         }
         if (min_t == 1000) return -1;
         return min_t;
     }
+
+    boolean intersectLight(Ray ray, double distance){
+        double min_t = 1000;
+        double t;
+        double u, v;
+        for (int i = 0; i < 12; i++) {
+            t = faces[i].intersect(ray, u, v);
+            if (t > 1e-5 && t < min_t) {
+                min_t = t;
+                if(min_t < distance) return true;
+            }
+        }
+        if (min_t == 1000) return false;
+        return min_t < distance;
+    }
+
+    Vector getNormal(Point p){
+        return normal;
+    }
 };
 
-class Pyramid {
+class Pyramid : public Object{
 public:
     Point lowestPoint;
     double width, height;
     Color color;
-    double ambient, diffuse, specular, reflection;
-    int shine;
+    Vector normal;
 
-    Triangle sides[4];
+    Triangle sides[6];
 
     void generateFaces(){
         Point top = lowestPoint + Vector(0, height, 0);
@@ -346,10 +433,14 @@ public:
         Triangle t2(top, lowerRight, upperRight);
         Triangle t3(top, upperRight, upperLeft);
         Triangle t4(top, upperLeft, lowerLeft);
+        Triangle t5(lowerLeft, lowerRight, upperRight);
+        Triangle t6(lowerLeft, upperRight, upperLeft);
         sides[0] = t1;
         sides[1] = t2;
         sides[2] = t3;
         sides[3] = t4;
+        sides[4] = t5;
+        sides[5] = t6;
     }
 
     Pyramid() {}
@@ -378,6 +469,8 @@ public:
         is >> p.lowestPoint >> p.width >> p.height >> p.color;
         is >> p.ambient >> p.diffuse >> p.specular >> p.reflection;
         is >> p.shine;
+        p.lowestPoint = p.lowestPoint + Vector(p.width/2, 0, p.width/2);
+        p.type = 'p';
         p.generateFaces();
         return is;
     }
@@ -385,34 +478,134 @@ public:
     void draw(){
         glPushMatrix();
         glColor3f(color.r, color.g, color.b);
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 6; i++) {
             sides[i].draw();
         }
         glPopMatrix();
     }
 
-    double intersect(Color &c, Ray ray){
+    double intersect(Ray ray, Color &c){
         double min_t = 1000;
         double t;
         double u, v;
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 6; i++) {
             t = sides[i].intersect(ray, u, v);
             if (t > 0 && t < min_t) {
                 min_t = t;
                 c = color;
+                normal = sides[i].getNormal(ray.start + ray.dir * t);
             }
         }
         if (min_t == 1000) return -1;
         return min_t;
     }
+
+    boolean intersectLight(Ray ray, double distance){
+        double min_t = 1000;
+        double t;
+        double u, v;
+        for (int i = 0; i < 6; i++) {
+            t = sides[i].intersect(ray, u, v);
+            if (t > 1e-5 && t < min_t) {
+                min_t = t;
+                if(min_t < distance) return true;
+            }
+        }
+        if (min_t == 1000) return false;
+        return min_t < distance;
+    }
+
+    Vector getNormal(Point p){
+        return normal;
+    }
 };
 
-class CheckerBoard {
+#pragma pack(push, 1)
+struct BMPHeader {
+    char signature[2];
+    uint32_t fileSize;
+    uint32_t reserved;
+    uint32_t dataOffset;
+    uint32_t headerSize;
+    int32_t width;
+    int32_t height;
+    uint16_t planes;
+    uint16_t bitsPerPixel;
+    uint32_t compression;
+    uint32_t dataSize;
+    int32_t horizontalResolution;
+    int32_t verticalResolution;
+    uint32_t colors;
+    uint32_t importantColors;
+};
+#pragma pack(pop)
+
+
+
+class Texture{
+public:
+    vector<vector<uint8_t>> pixel_values;
+    int width, height;
+    Texture() {}
+    void load(ifstream &fin){
+        if (!fin) {
+            cerr << "Failed to open file" << endl;
+            return;
+        }
+
+        BMPHeader header;
+        fin.read(reinterpret_cast<char*>(&header), sizeof(BMPHeader));
+
+        if (header.signature[0] != 'B' || header.signature[1] != 'M') {
+            cerr << "Invalid BMP file" << endl;
+            return;
+        }
+
+        if (header.bitsPerPixel != 24) {
+            cerr << "Only 24-bit BMP files are supported" << endl;
+            return;
+        }
+
+        width = header.width;
+        height = header.height;
+        int size = 3 * width * height;
+        pixel_values = vector<vector<uint8_t>>(height, vector<uint8_t>(width * 3));
+
+        // Seek to the beginning of the pixel data
+        fin.seekg(header.dataOffset);
+
+        for (int y = 0; y < height; ++y) {
+            fin.read(reinterpret_cast<char*>(pixel_values[y].data()), width * 3);
+        }
+
+        fin.close();
+    }
+
+    Color getColor(double u, double v){
+        int x = u * width;
+        int y = v * height;
+        return Color(pixel_values[y][x * 3] / 255.0, pixel_values[y][x * 3 + 1] / 255.0, pixel_values[y][x * 3 + 2] / 255.0);
+    }
+};
+
+class CheckerBoard : public Object{
 public:
     double width;
-    double ambient, diffuse, reflection;
+    Texture white;
+    Texture black;
+    boolean tex = false;
 
-    CheckerBoard() {}
+    void loadTexture(){
+        ifstream fin;
+        fin.open("texture_w.bmp", ios::binary);
+        white.load(fin);
+        fin.close();
+        fin.open("texture_b.bmp", ios::binary);
+        black.load(fin);
+        fin.close();
+    }
+
+    CheckerBoard() {loadTexture();}
     CheckerBoard(double w) {width = w;}
     CheckerBoard(double w, double a, double d, double r) {width = w; ambient = a; diffuse = d; reflection = r;}
     friend std::ostream& operator<<(std::ostream& os, const CheckerBoard& c) {
@@ -421,7 +614,14 @@ public:
     }
     friend std::istream& operator>>(std::istream& is, CheckerBoard& c) {
         is >> c.width >> c.ambient >> c.diffuse >> c.reflection;
+        c.shine = 0;
+        c.specular = 0;
+        c.type = 'b';
         return is;
+    }
+
+    void draw(){
+        return;
     }
 
     void draw(double draw_distance, Point pos){
@@ -446,55 +646,111 @@ public:
         glPopMatrix();
     }
 
-    double intersect(Color &c, Ray ray){
+    double intersect(Ray ray, Color &c){
         double t = -ray.start.y / ray.dir.y;
         if (t < 0) return -1;
         Point p = ray.start + ray.dir * t;
-        int x = int(p.x / width);
-        int z = int(p.z / width);
+        int x = round(p.x / width);
+        int z = round(p.z / width);
+        double tex_x = fabs((p.x - x * width) / width);
+        double tex_y = fabs((p.z - z * width) / width); 
         if ((x + z) % 2 == 0) {
-            c = Color(0, 0, 0);
+            if(tex) c = black.getColor(tex_x, tex_y);
+            else c = Color(0, 0, 0);
         } else {
-            c = Color(1, 1, 1);
+            if(tex) c = white.getColor(tex_x, tex_y);
+            else c = Color(1, 1, 1);
         }
         return t;
     }
+
+    boolean intersectLight(Ray ray, double distance){
+        double t = -ray.start.y / ray.dir.y;
+        if (t < 1e-5) return false;
+        return true;
+    }
+
+    Vector getNormal(Point p){
+        return Vector(0, 1, 0);
+    }
 };
 
-Color trace(Ray ray, vector<Sphere> spheres, vector<Cube> cubes, vector<Pyramid> pyramids, CheckerBoard chk, int recLevel){
+Color trace(Ray ray, vector<Object*> objects, vector<Light> lights, vector<SpotLight> spotLights, double draw_distance, int recLevel){
     Color c(0, 0, 0);
     if (recLevel == 0) return c;
-    double min_t = 1000;
+    double min_t = draw_distance;
     double t;
     Color tempColor;
-    for (int i = 0; i < spheres.size(); i++) {
-        t = spheres[i].intersect(ray, tempColor);
-        if (t > 0 && t < min_t) {
+    Object *obj;
+    for (int i = 0; i < objects.size(); i++) {
+        t = objects[i]->intersect(ray, tempColor);
+        if (t > 1e-5 && t < min_t) {
             min_t = t;
             c = tempColor;
+            obj = objects[i];
         }
     }
-    for (int i = 0; i < cubes.size(); i++) {
-        t = cubes[i].intersect(tempColor, ray);
-        if (t > 0 && t < min_t) {
-            min_t = t;
-            c = tempColor;
+    if (min_t == draw_distance) return c;
+    Point p = ray.start + ray.dir * min_t;
+    Vector normal = obj->getNormal(p);
+    if(normal * ray.dir > 0) normal = -normal;
+    double lambert = 0;
+    double phong = 0;
+    for (int i = 0; i < lights.size(); i++) {
+        Vector lightDir = lights[i].pos - p;        
+        double distance = lightDir.length();
+        lightDir.normalize();
+        Ray shadowRay(p, lightDir);
+        bool inShadow = false;
+        for (int j = 0; j < objects.size(); j++) {
+            if (objects[j]->intersectLight(shadowRay, distance)) {
+                inShadow = true;
+                break;
+            }
+        }
+        if (!inShadow) {
+            double scaling_factor = exp(-(distance * distance) * lights[i].falloff);
+
+            lambert += max((lightDir * normal) * scaling_factor, 0.0);
+            
+            Vector reflection = lightDir - normal * (2 * (lightDir * normal));
+            reflection.normalize();
+            phong += max(pow((reflection * ray.dir), obj->shine) * scaling_factor, 0.0);
         }
     }
-    for (int i = 0; i < pyramids.size(); i++) {
-        t = pyramids[i].intersect(tempColor, ray);
-        if (t > 0 && t < min_t) {
-            min_t = t;
-            c = tempColor;
+
+    for (int i = 0; i < spotLights.size(); i++) {
+        Vector lightDir = spotLights[i].pos - p;        
+        double distance = lightDir.length();
+        lightDir.normalize();
+        Ray shadowRay(p, lightDir);
+        bool inShadow = false;
+        if(fabs(acos((-lightDir * spotLights[i].dir)))  > spotLights[i].angle * M_PI / 180) inShadow = true;
+        if(!inShadow){
+            for (int j = 0; j < objects.size(); j++) {
+                if (objects[j]->intersectLight(shadowRay, distance)) {
+                    inShadow = true;
+                    break;
+                }
+            }
+        }
+        if (!inShadow) {
+            double scaling_factor = exp(-distance * distance * lights[i].falloff);
+            lambert += max((lightDir * normal) * scaling_factor, 0.0);
+
+            Vector reflection = lightDir - normal * (2 * (lightDir * normal));
+            reflection.normalize();
+            phong += max(pow((reflection * ray.dir), obj->shine) * scaling_factor, 0.0);
+
         }
     }
-    t = chk.intersect(tempColor, ray);
-    if (t > 0 && t < min_t) {
-        min_t = t;
-        c = tempColor;
-    }
-    if (min_t == 1000) return c * 255;
-    return c * 255;
+
+    Vector reflected = ray.dir - normal * (2 * (ray.dir * normal));
+    reflected.normalize();
+    Ray reflectedRay(ray.start + ray.dir * min_t, reflected);
+    Color reflectedColor = trace(reflectedRay, objects, lights, spotLights, draw_distance, recLevel - 1);
+    c = c * (obj->diffuse * lambert + obj->specular * phong + obj->ambient) + reflectedColor * obj->reflection;
+    return c;
 }
 
 #endif

@@ -20,21 +20,23 @@ Vector r;         // right direction
 Vector u;         // up direction
 double angle;           // angle of rotation of eye about center
 
-vector<Sphere> spheres;
-vector<Cube> cubes;
-vector<Pyramid> pyramids;
-CheckerBoard chk;
+vector<Object*> objects;
+vector<Light> lights;
+vector<SpotLight> spotLights;
 int nearPlane, farPlane;
 double fovY, fovX;
 double aspectRatio;
 int recursionLevel;
 int numberOfPixels;
 int noOfObjects;
+int noOfLights;
+int noOfSpotLights;
+CheckerBoard *chk;
 
 void calc_vects(){
 
     // Calculate the look vector
-    l = vectorFromPoints(pos, center);
+    l = center - pos;
     l.normalize();
     d = l.length();
 
@@ -99,16 +101,16 @@ void reshape(GLsizei width, GLsizei height) {  // GLsizei for non-negative integ
 }
 
 void drawAll(){
-    for(int i=0;i<spheres.size();i++){
-        spheres[i].draw();
+    for(int i=0;i<objects.size();i++){
+        objects[i]->draw();
+        objects[i]->draw(farPlane, pos);
     }
-    for(int i=0;i<cubes.size();i++){
-        cubes[i].draw();
+    for(int i=0;i<lights.size();i++){
+        lights[i].draw();
     }
-    for(int i=0;i<pyramids.size();i++){
-        pyramids[i].draw();
+    for(int i=0;i<spotLights.size();i++){
+        spotLights[i].draw();
     }
-    chk.draw(farPlane, pos);
 }
 
 void capture(){
@@ -127,15 +129,22 @@ void capture(){
     for(int i = 0; i < numberOfPixels; i++){
         for(int j = 0; j < numberOfPixels; j++){
             Point p = topLeft - u * (i * pixelHeight) + r * (j * pixelWidth);
-            Vector v = vectorFromPoints(pos, p);
+            Vector v = p - pos;
             v.normalize();
             Ray ray(pos, v);
-            Color c = trace(ray, spheres, cubes, pyramids, chk, recursionLevel);
+            Color c = trace(ray, objects, lights, spotLights, farPlane ,recursionLevel) * 255;
+            if(c.r > 255) c.r = 255;
+            if(c.g > 255) c.g = 255;
+            if(c.b > 255) c.b = 255;
+            if(c.r < 0) c.r = 0;
+            if(c.g < 0) c.g = 0;
+            if(c.b < 0) c.b = 0;
             image.set_pixel(j, i, c.r, c.g, c.b);
         }
     }
     image.save_image("out.bmp");
     cout << "Done" << endl;
+    exit(0);
 }
 
 void display() {
@@ -215,6 +224,9 @@ void keyboardListener(unsigned char key, int xx,int yy){
             angle -= rate*360;
             break;
 
+        case ' ':
+            chk->tex = !chk->tex;
+
 		default:
 			break;
 	}
@@ -265,27 +277,41 @@ void input(){
     ifstream fin;
     fin.open("description.txt");
     fin >> nearPlane >> farPlane >> fovY >> aspectRatio >> recursionLevel >> numberOfPixels;
-    fin >> chk;
+    chk = new CheckerBoard();
+    fin >> *chk;
+    objects.push_back(chk);
     fin >> noOfObjects;
     fovX = fovY * aspectRatio;
     for(int i=0;i<noOfObjects;i++){
         string type;
         fin >> type;
         if(type == "sphere"){
-            Sphere s;
-            fin >> s;
-            spheres.push_back(s);
+            Sphere *s = new Sphere();
+            fin >> *s;
+            objects.push_back(s);
         }
         else if(type == "pyramid"){
-            Pyramid p;
-            fin >> p;
-            pyramids.push_back(p);
+            Pyramid *p = new Pyramid();
+            fin >> *p;
+            objects.push_back(p);
         }
         else if(type == "cube"){
-            Cube c;
-            fin >> c;
-            cubes.push_back(c);
+            Cube *c = new Cube();
+            fin >> *c;
+            objects.push_back(c);
         }
+    }
+    fin >> noOfLights;
+    for(int i=0;i<noOfLights;i++){
+        Light l;
+        fin >> l;
+        lights.push_back(l);
+    }
+    fin >> noOfSpotLights;
+    for(int i=0;i<noOfSpotLights;i++){
+        SpotLight s;
+        fin >> s;
+        spotLights.push_back(s);
     }
 }
 
@@ -293,7 +319,9 @@ void input(){
 /* Main function: GLUT runs as a console application starting at main()  */
 int main(int argc, char** argv) {
     input();
-    pos.x=150;pos.y=100;pos.z=150;
+    pos.x=-300;pos.y=100;pos.z=0;
+    pos = lights[0].pos;
+    //pos.y = -pos.y;
     center.x=0;center.y=0;center.z=0;
     u.x=0;u.y=1;u.z=0;
     calc_vects();
