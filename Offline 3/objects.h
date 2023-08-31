@@ -362,6 +362,7 @@ public:
         is >> c.lowerLeft >> c.sideLength >> c.color;
         is >> c.ambient >> c.diffuse >> c.specular >> c.reflection;
         is >> c.shine;
+        c.lowerLeft = c.lowerLeft + Vector(-c.sideLength, 0, -c.sideLength/2);
         c.type = 'c';
         c.generateFaces();
         return is;
@@ -619,6 +620,7 @@ public:
     }
 
     void draw(double draw_distance, Point pos){
+        draw_distance *= 2;
         int noOfSquares = 2 * draw_distance / width;
         glPushMatrix();
         glTranslatef(-draw_distance + int(pos.x / width / 2) * width * 2, 0, -draw_distance + int(pos.z / width / 2) * width * 2);

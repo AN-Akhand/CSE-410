@@ -114,6 +114,7 @@ void drawAll(){
 }
 
 void capture(){
+    cout << "Capturing..." << endl;
     bitmap_image image(numberOfPixels, numberOfPixels);
     for(int i = 0; i < numberOfPixels; i++){
         for(int j = 0; j < numberOfPixels; j++){
@@ -126,7 +127,12 @@ void capture(){
     double pixelHeight = height / numberOfPixels;
     double pixelWidth = width / numberOfPixels;
     Point topLeft = middle + u * (height/2) - r * (width/2);
+    int percent = 0;
     for(int i = 0; i < numberOfPixels; i++){
+        if(i % (numberOfPixels/10) == 0){
+            cout << percent << "% done" << endl;
+            percent += 10;
+        }
         for(int j = 0; j < numberOfPixels; j++){
             Point p = topLeft - u * (i * pixelHeight) + r * (j * pixelWidth);
             Vector v = p - pos;
@@ -142,9 +148,9 @@ void capture(){
             image.set_pixel(j, i, c.r, c.g, c.b);
         }
     }
-    image.save_image("out.bmp");
     cout << "Done" << endl;
-    exit(0);
+    image.save_image("out.bmp");
+    cout << "Image saved" << endl;
 }
 
 void display() {
@@ -230,7 +236,6 @@ void keyboardListener(unsigned char key, int xx,int yy){
 		default:
 			break;
 	}
-    cout << "pos: " << pos << endl;
 	glutPostRedisplay();
 }
 
@@ -315,17 +320,15 @@ void input(){
         fin >> s;
         spotLights.push_back(s);
     }
+    cout << "Input taken" << endl;
 }
 
 
 /* Main function: GLUT runs as a console application starting at main()  */
 int main(int argc, char** argv) {
     input();
-    center.x=20;center.y=0;center.z=10;
-    pos.x=-300;pos.y=100;pos.z=0;
-    pos = lights[0].pos;
-    pos = pos + (pos - center).normalize() * 150;
-    pos = *(new Point(11.1869, 34.3149, -279.264));
+    center.x=0;center.y=50;center.z=0;
+    pos = *(new Point(0, 50, -300));
     //pos.y = -pos.y;
     u.x=0;u.y=1;u.z=0;
     calc_vects();
