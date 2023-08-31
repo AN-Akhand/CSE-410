@@ -230,6 +230,7 @@ void keyboardListener(unsigned char key, int xx,int yy){
 		default:
 			break;
 	}
+    cout << "pos: " << pos << endl;
 	glutPostRedisplay();
 }
 
@@ -270,6 +271,7 @@ void specialKeyListener(int key, int x,int y)
 		default:
 			break;
 	}
+    cout << "pos: " << pos << endl;
 	glutPostRedisplay();
 }
 
@@ -319,10 +321,12 @@ void input(){
 /* Main function: GLUT runs as a console application starting at main()  */
 int main(int argc, char** argv) {
     input();
+    center.x=20;center.y=0;center.z=10;
     pos.x=-300;pos.y=100;pos.z=0;
     pos = lights[0].pos;
+    pos = pos + (pos - center).normalize() * 150;
+    pos = *(new Point(11.1869, 34.3149, -279.264));
     //pos.y = -pos.y;
-    center.x=0;center.y=0;center.z=0;
     u.x=0;u.y=1;u.z=0;
     calc_vects();
 

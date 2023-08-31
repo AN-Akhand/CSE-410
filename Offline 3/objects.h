@@ -102,14 +102,17 @@ public:
 class Triangle {
 public:
     Point a, b, c;
+    Vector normal;
     Triangle() {}
-    Triangle(Point p, Point q, Point r) {a = p; b = q; c = r;}
+    Triangle(Point p, Point q, Point r) {a = p; b = q; c = r;normal = (b - a) ^ (c - a);normal.normalize();}
     friend std::ostream& operator<<(std::ostream& os, const Triangle& t) {
         os << t.a << " " << t.b << " " << t.c;
         return os;
     }
     friend std::istream& operator>>(std::istream& is, Triangle& t) {
         is >> t.a >> t.b >> t.c;
+        t.normal = (t.b - t.a) ^ (t.c - t.a);
+        t.normal.normalize();
         return is;
     }
     void draw(){
@@ -139,10 +142,6 @@ public:
     }
 
     Vector getNormal(Point p){
-        Vector edge1 = b - a;
-        Vector edge2 = c - a;
-        Vector normal = edge1 ^ edge2;
-        normal.normalize();
         return normal;
     }
 };
@@ -469,7 +468,7 @@ public:
         is >> p.lowestPoint >> p.width >> p.height >> p.color;
         is >> p.ambient >> p.diffuse >> p.specular >> p.reflection;
         is >> p.shine;
-        p.lowestPoint = p.lowestPoint + Vector(p.width/2, 0, p.width/2);
+        p.lowestPoint = p.lowestPoint + Vector(-p.width/2, 0, p.width/2);
         p.type = 'p';
         p.generateFaces();
         return is;
@@ -650,8 +649,8 @@ public:
         double t = -ray.start.y / ray.dir.y;
         if (t < 0) return -1;
         Point p = ray.start + ray.dir * t;
-        int x = round(p.x / width);
-        int z = round(p.z / width);
+        int x = floor(p.x / width);
+        int z = floor(p.z / width);
         double tex_x = fabs((p.x - x * width) / width);
         double tex_y = fabs((p.z - z * width) / width); 
         if ((x + z) % 2 == 0) {
