@@ -2,7 +2,6 @@
 #include <vector>
 #include <iostream>
 #include <cmath>
-#include <windows.h>  // for MS Windows
 #include <GL/glut.h>  // GLUT, include glu.h and gl.h
 #include "Matrix.h"
 #include <cstdint>
@@ -378,7 +377,7 @@ public:
     }
 
     double intersect(Ray ray, Color &c){
-        double min_t = 1000;
+        double min_t = INT_MAX;
         double t;
         double u, v;
         for (int i = 0; i < 12; i++) {
@@ -389,12 +388,11 @@ public:
                 normal = faces[i].getNormal(ray.start + ray.dir * t);
             }
         }
-        if (min_t == 1000) return -1;
         return min_t;
     }
 
     boolean intersectLight(Ray ray, double distance){
-        double min_t = 1000;
+        double min_t = INT_MAX;
         double t;
         double u, v;
         for (int i = 0; i < 12; i++) {
@@ -404,7 +402,6 @@ public:
                 if(min_t < distance) return true;
             }
         }
-        if (min_t == 1000) return false;
         return min_t < distance;
     }
 
@@ -484,7 +481,7 @@ public:
     }
 
     double intersect(Ray ray, Color &c){
-        double min_t = 1000;
+        double min_t = INT_MAX;
         double t;
         double u, v;
         for (int i = 0; i < 6; i++) {
@@ -495,12 +492,11 @@ public:
                 normal = sides[i].getNormal(ray.start + ray.dir * t);
             }
         }
-        if (min_t == 1000) return -1;
         return min_t;
     }
 
     boolean intersectLight(Ray ray, double distance){
-        double min_t = 1000;
+        double min_t = INT_MAX;
         double t;
         double u, v;
         for (int i = 0; i < 6; i++) {
@@ -510,7 +506,6 @@ public:
                 if(min_t < distance) return true;
             }
         }
-        if (min_t == 1000) return false;
         return min_t < distance;
     }
 
@@ -583,7 +578,7 @@ public:
     Color getColor(double u, double v){
         int x = u * width;
         int y = v * height;
-        return Color(pixel_values[y][x * 3] / 255.0, pixel_values[y][x * 3 + 1] / 255.0, pixel_values[y][x * 3 + 2] / 255.0);
+        return Color(pixel_values[y][x * 3 + 1] / 255.0, pixel_values[y][x * 3 + 2] / 255.0, pixel_values[y][x * 3 + 3] / 255.0);
     }
 };
 
@@ -689,7 +684,7 @@ Color trace(Ray ray, vector<Object*> objects, vector<Light> lights, vector<SpotL
             obj = objects[i];
         }
     }
-    if (min_t == draw_distance) return c;
+    if (min_t >= draw_distance) return Color(0, 0, 0);
     Point p = ray.start + ray.dir * min_t;
     Vector normal = obj->getNormal(p);
     if(normal * ray.dir > 0) normal = -normal;
