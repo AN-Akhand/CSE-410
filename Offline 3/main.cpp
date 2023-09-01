@@ -113,7 +113,7 @@ void drawAll(){
     }
 }
 
-void capture(){
+void capture(string filename){
     cout << "Capturing..." << endl;
     bitmap_image image(numberOfPixels, numberOfPixels);
     for(int i = 0; i < numberOfPixels; i++){
@@ -128,13 +128,14 @@ void capture(){
     double pixelWidth = width / numberOfPixels;
     Point topLeft = middle + u * (height/2) - r * (width/2);
     int percent = 0;
+    Point p;
     for(int i = 0; i < numberOfPixels; i++){
         if(i % (numberOfPixels/10) == 0){
             cout << percent << "% done" << endl;
             percent += 10;
         }
         for(int j = 0; j < numberOfPixels; j++){
-            Point p = topLeft - u * (i * pixelHeight) + r * (j * pixelWidth);
+            p = topLeft - u * (i * pixelHeight) + r * (j * pixelWidth);
             Vector v = p - pos;
             v.normalize();
             Ray ray(pos, v);
@@ -148,8 +149,9 @@ void capture(){
             image.set_pixel(j, i, c.r, c.g, c.b);
         }
     }
+    cout << p << endl;
     cout << "Done" << endl;
-    image.save_image("out.bmp");
+    image.save_image(filename);
     cout << "Image saved" << endl;
 }
 
@@ -165,61 +167,79 @@ void display() {
               center.x,center.y,center.z, 
               u.x,u.y,u.z);
 
-    drawAxes();
+    //drawAxes();
 
     drawAll();
 
     glutSwapBuffers();  // Render now
 }
 
+void rotateCameraX(double rate){
+    l = l * cos(rate) + u * sin(rate);
+    u = u * cos(rate) - l * sin(rate);
+}
+
+void rotateCameraY(double rate){
+    r = r * cos(rate) + l * sin(rate);
+    l = l * cos(rate) - r * sin(rate);
+}
+
+void rotateCameraZ(double rate){
+    u = u * cos(rate) + r * sin(rate);
+    r = r * cos(rate) - u * sin(rate);
+}
+
+void focusCenterMoveVert(double v){
+    pos.y += 1*v;
+    calc_vects();
+}
+
+int w = 0, moveForward = 0, lookLeft = 0, moveUp = 0;
+
 void keyboardListener(unsigned char key, int xx,int yy){
-    double rate = 0.1;
-    float v = 0.05;
+    double rate = 0.05;
+    float v = 0.02;
     double len;
 	switch(key){
 
         case '0':
-            capture();
+            capture("out.bmp");
             break;
 
 		case '1':
-            r = r * cos(rate) + l * sin(rate);
-            l = l * cos(rate) - r * sin(rate);
+            rotateCameraY(rate);
+            lookLeft++;
 			break;
 
         case '2':
-            r = r * cos(-rate) + l * sin(-rate);
-            l = l * cos(-rate) - r * sin(-rate);
+            rotateCameraY(-rate);
+            lookLeft--;
 			break;
 
         case '3':
-            l = l * cos(rate) + u * sin(rate);
-            u = u * cos(rate) - l * sin(rate);
+            rotateCameraX(rate);
 			break;
 
         case '4':
-            l = l * cos(-rate) + u * sin(-rate);
-            u = u * cos(-rate) - l * sin(-rate);
+            rotateCameraX(-rate);
 			break;
 
         case '5':
-            u = u * cos(rate) + r * sin(rate);
-            r = r * cos(rate) - u * sin(rate);
+            rotateCameraZ(rate);
 			break;
 
         case '6':
-            u = u * cos(-rate) + r * sin(-rate);
-            r = r * cos(-rate) - u * sin(-rate);
+            rotateCameraZ(-rate);
 			break;
 
         case 'w':
-            pos.y += 1*v;
-            calc_vects();
+            focusCenterMoveVert(v);
+            w++;
             break;
         
         case 's':
-            pos.y -= 1*v;
-            calc_vects();
+            focusCenterMoveVert(-v);
+            w--;
             break;
 
         case 'a':
@@ -233,10 +253,31 @@ void keyboardListener(unsigned char key, int xx,int yy){
         case ' ':
             chk->tex = !chk->tex;
 
+        case 'p':
+
+            break;
+
+        case 'q':
+            exit(0);
+            break;
+
 		default:
 			break;
 	}
 	glutPostRedisplay();
+    cout << "w: " << w << " moveForward: " << moveForward << " lookLeft: " << lookLeft << " moveUp: " << moveUp << endl;
+}
+
+void moveVert(double v){
+    pos = pos + u * v;
+}
+
+void moveHor(double v){
+    pos = pos + r * v;
+}
+
+void moveDepth(double v){
+    pos = pos + l * v;
 }
 
 
@@ -245,24 +286,28 @@ void specialKeyListener(int key, int x,int y)
     double rate = 5.0;
 	switch(key){
 		case GLUT_KEY_UP:		//down arrow key
-			pos = pos + l * rate;
+			moveDepth(rate);
+            moveForward++;
 			break;
 		case GLUT_KEY_DOWN:		// up arrow key
-			pos = pos - l * rate;
+			moveDepth(-rate);
+            moveForward--;
 			break;
 
 		case GLUT_KEY_RIGHT:
-			pos = pos + r * rate;
+			moveHor(rate);
 			break;
 		case GLUT_KEY_LEFT :
-			pos = pos - r * rate;
+			moveHor(-rate);
 			break;
 
 		case GLUT_KEY_PAGE_UP:
-		    pos = pos + u * rate;
+		    moveVert(rate);
+            moveUp++;
 			break;
 		case GLUT_KEY_PAGE_DOWN:
-            pos = pos - u * rate;
+            moveVert(-rate);
+            moveUp--;
 			break;
 
 		case GLUT_KEY_INSERT:
@@ -276,7 +321,7 @@ void specialKeyListener(int key, int x,int y)
 		default:
 			break;
 	}
-    cout << "pos: " << pos << endl;
+    cout << "w: " << w << " moveForward: " << moveForward << " lookLeft: " << lookLeft << " moveUp: " << moveUp << endl;
 	glutPostRedisplay();
 }
 
@@ -327,9 +372,8 @@ void input(){
 /* Main function: GLUT runs as a console application starting at main()  */
 int main(int argc, char** argv) {
     input();
-    center.x=0;center.y=50;center.z=0;
-    pos = *(new Point(0, 50, -300));
-    //pos.y = -pos.y;
+    center = Point(0, 50, 0);
+    pos = Point(0, 50, -350);
     u.x=0;u.y=1;u.z=0;
     calc_vects();
 

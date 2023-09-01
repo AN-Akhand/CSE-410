@@ -5,6 +5,7 @@
 #include <GL/glut.h>  // GLUT, include glu.h and gl.h
 #include "Matrix.h"
 #include <cstdint>
+#include "bitmap_image.hpp"
 
 #ifndef OBJECTS_H
 #define OBJECTS_H
@@ -194,13 +195,9 @@ public:
         glPushMatrix();
         glColor3f(color.r, color.g, color.b);
         glTranslatef(pos.x, pos.y, pos.z);
-        //draw a cone facing the direction of the light
-        double xRot = acos(dir.y) * 180 / 3.1416;
-        double zRot = acos(dir.x / sqrt(dir.x * dir.x + dir.z * dir.z)) * 180 / M_PI;
-        if (dir.z < 0) zRot = -zRot;
-        glRotatef(xRot, 1, 0, 0);
-        glRotatef(zRot, 0, 0, 1);
-
+        Vector axis = Vector(0, 0, 1) ^ dir;
+        double angle = acos(dir.z);
+        glRotatef(angle * 180 / M_PI, axis.x, axis.y, axis.z);
         glutSolidCone(5, 20, 100, 100);
         glPopMatrix();
     }
@@ -533,71 +530,17 @@ struct BMPHeader {
     uint32_t colors;
     uint32_t importantColors;
 };
-#pragma pack(pop)
-
-
-
-class Texture{
-public:
-    vector<vector<uint8_t>> pixel_values;
-    int width, height;
-    Texture() {}
-    void load(ifstream &fin){
-        if (!fin) {
-            cerr << "Failed to open file" << endl;
-            return;
-        }
-
-        BMPHeader header;
-        fin.read(reinterpret_cast<char*>(&header), sizeof(BMPHeader));
-
-        if (header.signature[0] != 'B' || header.signature[1] != 'M') {
-            cerr << "Invalid BMP file" << endl;
-            return;
-        }
-
-        if (header.bitsPerPixel != 24) {
-            cerr << "Only 24-bit BMP files are supported" << endl;
-            return;
-        }
-
-        width = header.width;
-        height = header.height;
-        int size = 3 * width * height;
-        pixel_values = vector<vector<uint8_t>>(height, vector<uint8_t>(width * 3));
-
-        // Seek to the beginning of the pixel data
-        fin.seekg(header.dataOffset);
-
-        for (int y = 0; y < height; ++y) {
-            fin.read(reinterpret_cast<char*>(pixel_values[y].data()), width * 3);
-        }
-
-        fin.close();
-    }
-
-    Color getColor(double u, double v){
-        int x = u * width;
-        int y = v * height;
-        return Color(pixel_values[y][x * 3 + 1] / 255.0, pixel_values[y][x * 3 + 2] / 255.0, pixel_values[y][x * 3 + 3] / 255.0);
-    }
-};
 
 class CheckerBoard : public Object{
 public:
     double width;
-    Texture white;
-    Texture black;
+    bitmap_image white;
+    bitmap_image black;
     boolean tex = false;
 
     void loadTexture(){
-        ifstream fin;
-        fin.open("texture_w.bmp", ios::binary);
-        white.load(fin);
-        fin.close();
-        fin.open("texture_b.bmp", ios::binary);
-        black.load(fin);
-        fin.close();
+        white = bitmap_image("./texture_w.bmp");
+        black = bitmap_image("./texture_b.bmp");
     }
 
     CheckerBoard() {loadTexture();}
@@ -650,11 +593,18 @@ public:
         int z = floor(p.z / width);
         double tex_x = fabs((p.x - x * width) / width);
         double tex_y = fabs((p.z - z * width) / width); 
+        unsigned char r, g, b;
         if ((x + z) % 2 == 0) {
-            if(tex) c = black.getColor(tex_x, tex_y);
+            if(tex) {
+                black.get_pixel(tex_x * black.width(), tex_y * black.height(), r ,g ,b);
+                c = Color(r / 255.0, g / 255.0, b / 255.0);
+            }
             else c = Color(0, 0, 0);
         } else {
-            if(tex) c = white.getColor(tex_x, tex_y);
+            if(tex) {
+                white.get_pixel(tex_x * white.width(), tex_y * white.height(), r ,g ,b);
+                c = Color(r / 255.0, g / 255.0, b / 255.0);
+            }
             else c = Color(1, 1, 1);
         }
         return t;
@@ -711,7 +661,7 @@ Color trace(Ray ray, vector<Object*> objects, vector<Light> lights, vector<SpotL
             
             Vector reflection = lightDir - normal * (2 * (lightDir * normal));
             reflection.normalize();
-            phong += max(pow((reflection * ray.dir), obj->shine) * scaling_factor, 0.0);
+            phong += max(pow((reflection * ray.dir), obj->shine), 0.0) * scaling_factor;
         }
     }
 
@@ -736,8 +686,7 @@ Color trace(Ray ray, vector<Object*> objects, vector<Light> lights, vector<SpotL
 
             Vector reflection = lightDir - normal * (2 * (lightDir * normal));
             reflection.normalize();
-            phong += max(pow((reflection * ray.dir), obj->shine) * scaling_factor, 0.0);
-
+            phong += max(pow((reflection * ray.dir), obj->shine), 0.0)  * scaling_factor;
         }
     }
 
