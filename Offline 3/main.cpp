@@ -149,7 +149,6 @@ void capture(string filename){
             image.set_pixel(j, i, c.r, c.g, c.b);
         }
     }
-    cout << p << endl;
     cout << "Done" << endl;
     image.save_image(filename);
     cout << "Image saved" << endl;
@@ -303,7 +302,6 @@ void specialKeyListener(int key, int x,int y)
 		default:
 			break;
 	}
-    cout << "pos: " << pos << endl;
 	glutPostRedisplay();
 }
 
