@@ -194,12 +194,23 @@ void focusCenterMoveVert(double v){
     calc_vects();
 }
 
-int w = 0, moveForward = 0, lookLeft = 0, moveUp = 0;
+void moveVert(double v){
+    pos = pos + u * v;
+}
+
+void moveHor(double v){
+    pos = pos + r * v;
+}
+
+void moveDepth(double v){
+    pos = pos + l * v;
+}
 
 void keyboardListener(unsigned char key, int xx,int yy){
     double rate = 0.05;
     float v = 0.02;
     double len;
+    int frame = 0;
 	switch(key){
 
         case '0':
@@ -208,12 +219,10 @@ void keyboardListener(unsigned char key, int xx,int yy){
 
 		case '1':
             rotateCameraY(rate);
-            lookLeft++;
 			break;
 
         case '2':
             rotateCameraY(-rate);
-            lookLeft--;
 			break;
 
         case '3':
@@ -234,12 +243,10 @@ void keyboardListener(unsigned char key, int xx,int yy){
 
         case 'w':
             focusCenterMoveVert(v);
-            w++;
             break;
         
         case 's':
             focusCenterMoveVert(-v);
-            w--;
             break;
 
         case 'a':
@@ -252,46 +259,23 @@ void keyboardListener(unsigned char key, int xx,int yy){
 
         case ' ':
             chk->tex = !chk->tex;
-
-        case 'p':
-
             break;
-
-        case 'q':
-            exit(0);
-            break;
-
+        
 		default:
 			break;
 	}
 	glutPostRedisplay();
-    cout << "w: " << w << " moveForward: " << moveForward << " lookLeft: " << lookLeft << " moveUp: " << moveUp << endl;
 }
-
-void moveVert(double v){
-    pos = pos + u * v;
-}
-
-void moveHor(double v){
-    pos = pos + r * v;
-}
-
-void moveDepth(double v){
-    pos = pos + l * v;
-}
-
 
 void specialKeyListener(int key, int x,int y)
 {
-    double rate = 5.0;
+    double rate = 10.0;
 	switch(key){
 		case GLUT_KEY_UP:		//down arrow key
 			moveDepth(rate);
-            moveForward++;
 			break;
 		case GLUT_KEY_DOWN:		// up arrow key
 			moveDepth(-rate);
-            moveForward--;
 			break;
 
 		case GLUT_KEY_RIGHT:
@@ -303,11 +287,9 @@ void specialKeyListener(int key, int x,int y)
 
 		case GLUT_KEY_PAGE_UP:
 		    moveVert(rate);
-            moveUp++;
 			break;
 		case GLUT_KEY_PAGE_DOWN:
             moveVert(-rate);
-            moveUp--;
 			break;
 
 		case GLUT_KEY_INSERT:
@@ -321,7 +303,7 @@ void specialKeyListener(int key, int x,int y)
 		default:
 			break;
 	}
-    cout << "w: " << w << " moveForward: " << moveForward << " lookLeft: " << lookLeft << " moveUp: " << moveUp << endl;
+    cout << "pos: " << pos << endl;
 	glutPostRedisplay();
 }
 
@@ -373,7 +355,7 @@ void input(){
 int main(int argc, char** argv) {
     input();
     center = Point(0, 50, 0);
-    pos = Point(0, 50, -350);
+    pos = Point(0, 50, -300);
     u.x=0;u.y=1;u.z=0;
     calc_vects();
 
