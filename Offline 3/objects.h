@@ -221,6 +221,8 @@ public:
     double radius;
     double radius2;
     Color color;
+    bitmap_image texture;
+    boolean tex = false;
     Sphere() {}
     Sphere(Point p, double r) {center = p; radius = r;color = Color(1,1,1);radius2 = r*r;}
     Sphere(Point p, double r, Color c) {center = p; radius = r;color = c;radius2 = r*r;}
@@ -254,7 +256,15 @@ public:
         double t_hc = sqrt(radius2 - d2);
         double t1 = t_ca - t_hc;
         double t2 = t_ca + t_hc;
-        c = color;
+        Vector n = getNormal(ray.start + ray.dir * t1);
+        if(tex) {
+            double tex_x = asin(n.x)/M_PI + 0.5;
+            double tex_y = asin(n.y)/M_PI + 0.5;
+            unsigned char r, g, b;
+            texture.get_pixel(tex_x * texture.width(), tex_y * texture.height(), r ,g ,b);
+            c = Color(r / 255.0, g / 255.0, b / 255.0);
+        }
+        else c = color;
 
         if (t1 < 0 && t2 < 0) return -1;
         if (t1 < 0) return t2;
@@ -539,8 +549,8 @@ public:
     boolean tex = false;
 
     void loadTexture(){
-        white = bitmap_image("./texture_w.bmp");
-        black = bitmap_image("./texture_b.bmp");
+        white = bitmap_image("./mobs_texture.bmp");
+        black = bitmap_image("./leda_texture.bmp");
     }
 
     CheckerBoard() {loadTexture();}
